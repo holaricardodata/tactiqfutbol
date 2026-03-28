@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>tactiq — Post-partido</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --green:#1D9E75;--green-dk:#0F6E56;--green-lt:#5DCAA5;
+  --bg:#0e1210;--bg2:#131a16;--border:#1e2d24;
+  --ink:#c8ddd0;--muted:#a8c4b0;--dim:#a8c4b0;--ghost:#a8c4b0;--faint:#6a8a76;
+}
+html,body{height:100dvh;max-height:100dvh;font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);overflow:hidden;}
+body{display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:46px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0;background:var(--bg);}
+.logo-icon{width:28px;height:28px;background:var(--green);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.logo-text{font-size:18px;font-weight:500;color:#fff;letter-spacing:-0.5px;}
+.btn{border-radius:8px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.12s;}
+.btn-outline{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);}
+.btn-outline:hover{background:rgba(255,255,255,0.08);}
+.btn-green{background:linear-gradient(180deg,var(--green),var(--green-dk));border:none;border-bottom:2px solid #0a4a35;color:#fff;}
+.btn-gray{background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--ghost);cursor:not-allowed;}
+
+/* MAIN CONTENT */
+.content{flex:1;min-height:0;overflow:hidden;padding:8px 12px;display:flex;flex-direction:column;gap:6px;}
+
+/* PARTIDO HEADER */
+.partido-hdr{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:16px;}
+.partido-score{font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.tag{padding:2px 9px;border-radius:12px;font-size:9px;font-weight:600;}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;}
+.stat-lbl{font-size:8px;color:var(--ghost);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+.stat-val{font-size:20px;font-weight:700;line-height:1;}
+.stat-sub{font-size:8px;color:var(--ghost);margin-top:2px;}
+
+/* CAMPOGRAMA SECTION */
+.campo-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;flex-shrink:0;}
+.campo-section-hdr{padding:6px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.campo-section-title{font-size:10px;font-weight:600;color:#c8ddd0;text-transform:uppercase;letter-spacing:0.5px;}
+.campos-grid{display:grid;grid-template-columns:130px 1fr 1fr;gap:0;min-width:0;}
+
+/* PLAYERS PANEL */
+.players-panel{border-right:1px solid var(--border);padding:6px 6px;overflow-y:auto;}
+.player-item{display:flex;align-items:center;gap:5px;padding:3px 4px;border-radius:5px;cursor:pointer;transition:background 0.1s;}
+.player-item:hover{background:rgba(255,255,255,0.04);}
+.player-cb{width:12px;height:12px;border-radius:3px;border:1.5px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.12s;}
+.player-cb.checked{background:var(--green);border-color:var(--green);}
+.player-cb.checked::after{content:'✓';font-size:8px;color:#fff;font-weight:700;}
+.player-num{font-size:8px;color:var(--ghost);width:14px;flex-shrink:0;}
+.player-name{font-size:10px;color:#c8ddd0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* CAMPO SVG */
+.campo-wrap{padding:6px 8px;background:#0a0e0c;border-right:1px solid var(--border);min-width:0;overflow:hidden;}
+.campo-wrap:last-child{border-right:none;}
+.campo-wrap svg{width:100%;height:auto;display:block;}
+
+/* SLICER */
+.slicer-wrap{padding:8px 14px 8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:0;}
+.slicer-labels{display:flex;justify-content:space-between;align-items:center;}
+.slicer-lbl{font-size:9px;color:var(--ghost);}
+.slicer-range{font-size:10px;font-weight:600;color:var(--green-lt);}
+.slider-container{position:relative;height:20px;display:flex;align-items:center;}
+.slider-track{position:absolute;left:0;right:0;height:3px;background:var(--border);border-radius:2px;}
+.slider-fill{position:absolute;height:3px;background:var(--green);border-radius:2px;}
+.slider-input{position:absolute;width:100%;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;height:3px;}
+.slider-input::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--green);border:2px solid var(--bg2);box-shadow:0 1px 4px rgba(0,0,0,0.4);pointer-events:all;cursor:pointer;}
+.slider-input::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--green);border:2px solid var(--bg2);pointer-events:all;cursor:pointer;}
+
+/* BOTTOM ROW */
+.bottom-row{display:grid;grid-template-columns:1fr 380px;gap:12px;}
+
+/* EVENTOS TABLE */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-hdr{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.card-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.ev-table{width:100%;border-collapse:collapse;font-size:10px;}
+.ev-table th{padding:5px 10px;text-align:left;color:var(--ghost);font-weight:600;text-transform:uppercase;font-size:8px;letter-spacing:0.4px;background:#0a0e0c;}
+.ev-table td{padding:6px 10px;border-top:1px solid #0f1710;color:var(--muted);}
+.ev-badge{padding:2px 7px;border-radius:10px;font-size:8px;font-weight:600;white-space:nowrap;}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;}
+.chat-messages{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:220px;}
+.msg-ia{background:rgba(29,158,117,0.07);border:1px solid rgba(29,158,117,0.15);border-radius:8px;padding:9px 11px;}
+.msg-user{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:9px 11px;align-self:flex-end;max-width:85%;}
+.msg-name{font-size:8px;font-weight:600;margin-bottom:4px;}
+.msg-text{font-size:10px;line-height:1.4;}
+.chat-suggestions{padding:6px 12px;display:flex;flex-wrap:wrap;gap:4px;border-top:1px solid var(--border);}
+.sugg{padding:3px 9px;border-radius:12px;font-size:9px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--ghost);cursor:pointer;transition:all 0.1s;}
+.sugg:hover{background:rgba(255,255,255,0.08);color:var(--muted);}
+.chat-input-row{padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:center;}
+.chat-input{flex:1;background:#0a0e0c;border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-size:11px;color:var(--ink);font-family:'Inter',sans-serif;outline:none;}
+.chat-input:focus{border-color:rgba(29,158,117,0.4);}
+.chat-send{background:var(--green);border:none;border-radius:7px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.chat-send:hover{background:var(--green-dk);}
+
+/* FILTROS */
+.filtro-btn{padding:3px 10px;border-radius:12px;font-size:9px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:#a8c4b0;transition:all 0.12s;}
+.filtro-btn:hover{background:rgba(255,255,255,0.08);color:#c8ddd0;}
+.filtro-btn-active{background:rgba(29,158,117,0.15);border-color:rgba(29,158,117,0.4);color:#5DCAA5;}
+.filtro-rival{color:#c8ddd0;border-color:rgba(255,255,255,0.2);}
+.filtro-rival.filtro-btn-active{background:rgba(248,113,113,0.15);border-color:rgba(248,113,113,0.5);color:#f87171;}
+
+/* Mejor contraste general */
+.card-title{font-size:10px;font-weight:600;color:#c8ddd0;text-transform:uppercase;letter-spacing:0.5px;}
+.ev-table td{padding:5px 10px;border-top:1px solid #0f1710;color:#c8ddd0;}
+.ev-table th{padding:5px 10px;text-align:left;color:#a8c4b0;font-weight:600;text-transform:uppercase;font-size:8px;letter-spacing:0.4px;background:#0a0e0c;}
+.player-name{font-size:10px;color:#c8ddd0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.msg-text{font-size:11px;line-height:1.5;color:#c8ddd0;}
+.sugg{padding:3px 9px;border-radius:12px;font-size:9px;background:rgba(255,255,255,0.05);border:1px solid #2a3d30;color:#a8c4b0;cursor:pointer;transition:all 0.1s;}
+.sugg:hover{background:rgba(255,255,255,0.1);color:#c8ddd0;}
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:999;}
+.loading-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:ldot 1.2s ease-in-out infinite;}
+.loading-dot:nth-child(2){animation-delay:0.2s;}
+.loading-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes ldot{0%,80%,100%{opacity:0.2;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div style="display:flex;gap:6px;">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+  <div style="font-size:11px;color:var(--ghost);">Cargando análisis...</div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="logo-icon">
+      <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.2" fill="white"/><circle cx="9" cy="2.5" r="1.4" fill="white" opacity="0.9"/><circle cx="9" cy="15.5" r="1.4" fill="white" opacity="0.9"/><circle cx="2.5" cy="9" r="1.4" fill="white" opacity="0.9"/><circle cx="15.5" cy="9" r="1.4" fill="white" opacity="0.9"/><line x1="9" y1="9" x2="9" y2="2.5" stroke="white" stroke-width="0.8" opacity="0.4"/><line x1="9" y1="9" x2="9" y2="15.5" stroke="white" stroke-width="0.8" opacity="0.4"/><line x1="9" y1="9" x2="2.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.4"/><line x1="9" y1="9" x2="15.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.4"/></svg>
+    </div>
+    <span class="logo-text">tactiqfutbol<span style="font-size:14px;font-weight:400;color:#5DCAA5;letter-spacing:0;">.es</span></span>
+  </div>
+  <div style="font-size:10px;color:#a8c4b0;margin-left:8px;">Resumen del partido</div>
+  <button onclick="abrirHistorial()" style="height:28px;padding:0 11px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#a8c4b0;cursor:pointer;display:flex;align-items:center;gap:5px;margin-left:8px;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(29,158,117,0.3)';this.style.color='#5DCAA5'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.color='#8aaa96'">
+    <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><line x1="4.5" y1="9.5" x2="7.5" y2="9.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+    Mis partidos
+  </button>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <button onclick="compartirPartido()" style="height:28px;padding:0 12px;border-radius:6px;background:linear-gradient(135deg,#1D9E75,#0F6E56);border:none;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="9.5" cy="2.5" r="1.5" stroke="white" stroke-width="1.1"/><circle cx="9.5" cy="9.5" r="1.5" stroke="white" stroke-width="1.1"/><circle cx="2.5" cy="6" r="1.5" stroke="white" stroke-width="1.1"/><line x1="4" y1="6" x2="8" y2="3" stroke="white" stroke-width="1.1"/><line x1="4" y1="6" x2="8" y2="9" stroke="white" stroke-width="1.1"/></svg>
+      Compartir en redes
+    </button>
+    <button onclick="modoVestuario()" style="height:28px;padding:0 12px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#c8ddd0;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="3" y="3" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/><rect x="6.5" y="3" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/><rect x="3" y="6.5" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/><rect x="6.5" y="6.5" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/></svg>
+      Vestuario
+    </button>
+    <button class="btn btn-green" onclick="nuevoPartido()">+ Nuevo partido</button>
+    <div style="display:flex;align-items:center;gap:5px;padding:0 10px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="#8aaa96" stroke-width="1.2"/><path d="M2 12c0-2.8 2.2-4 5-4s5 1.2 5 4" stroke="#8aaa96" stroke-width="1.2" stroke-linecap="round"/></svg>
+      <span style="font-size:10px;color:#c8ddd0;font-weight:500;" id="user-display">...</span>
+    </div>
+    <button onclick="doLogout()" style="height:28px;padding:0 10px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#a8c4b0;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#f87171';this.style.borderColor='rgba(248,113,113,0.3)'" onmouseout="this.style.color='#5a7a66';this.style.borderColor='rgba(255,255,255,0.12)'">Salir</button>
+  </div>
+</div>
+  </div>
+</div>
+
+<!-- HISTORIAL PANEL -->
+<div id="historial-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;" onclick="cerrarHistorial()"></div>
+<div id="historial-panel" style="display:none;position:fixed;top:0;right:0;width:340px;height:100vh;background:#131a16;border-left:1px solid #1e2d24;z-index:501;flex-direction:column;transform:translateX(100%);transition:transform 0.25s ease;">
+  <div style="padding:14px 16px;border-bottom:1px solid #1e2d24;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#c8ddd0;">Mis partidos</div>
+      <div style="font-size:9px;color:#a8c4b0;" id="historial-subtitle">Cargando...</div>
+    </div>
+    <button onclick="cerrarHistorial()" style="background:none;border:none;color:#a8c4b0;font-size:18px;cursor:pointer;line-height:1;padding:4px;">✕</button>
+  </div>
+  <div id="historial-list" style="flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+    <div style="text-align:center;padding:30px;color:#6a9a7a;font-size:11px;">Cargando...</div>
+  </div>
+</div>
+
+<!-- CONTENT: layout fijo sin scroll, todo proporcional a 100dvh -->
+<div class="content" id="main-content" style="display:none;">
+
+  <!-- ZONA 1: resultado + KPIs — altura fija 62px -->
+  <div style="height:62px;flex-shrink:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0 14px;display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:center;">
+    <div>
+      <div style="font-size:9px;color:#a8c4b0;" id="ph-meta">J— · — · —</div>
+      <div style="font-size:16px;font-weight:800;letter-spacing:-0.5px;margin:2px 0;" id="ph-score">Local 0 — 0 Visitante</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="tag" id="ph-resultado" style="background:rgba(29,158,117,0.12);color:#1D9E75;border:1px solid rgba(29,158,117,0.2);">—</span>
+        <span style="font-size:9px;color:#a8c4b0;" id="ph-eventos">0 eventos</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;height:46px;">
+      <div style="padding:3px 4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:7px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.3px;">Goles</div>
+        <div style="font-size:14px;font-weight:700;color:#1D9E75;line-height:1.1;" id="st-goles">0</div>
+        <div style="font-size:6px;color:#a8c4b0;" id="st-goles-sub">—</div>
+      </div>
+      <div style="padding:3px 4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:7px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.3px;">Tiros</div>
+        <div style="font-size:14px;font-weight:700;color:#e8f0ec;line-height:1.1;" id="st-tiros">0</div>
+        <div style="font-size:6px;color:#a8c4b0;" id="st-tiros-sub">—</div>
+      </div>
+      <div style="padding:3px 4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:7px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.3px;">Recup.</div>
+        <div style="font-size:14px;font-weight:700;color:#5DCAA5;line-height:1.1;" id="st-recup">0</div>
+        <div style="font-size:6px;color:#a8c4b0;">ganados</div>
+      </div>
+      <div style="padding:3px 4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:7px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.3px;">Pases pel.</div>
+        <div style="font-size:14px;font-weight:700;color:#60a5fa;line-height:1.1;" id="st-pases">0</div>
+        <div style="font-size:6px;color:#a8c4b0;">campo rival</div>
+      </div>
+      <div style="padding:3px 4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:7px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.3px;">Faltas</div>
+        <div style="font-size:14px;font-weight:700;color:#e8f0ec;line-height:1.1;" id="st-faltas">0</div>
+        <div style="font-size:6px;color:#a8c4b0;" id="st-faltas-sub">—</div>
+      </div>
+      <div style="padding:3px 4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:7px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.3px;">Tarjetas</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:2px;line-height:1;">
+          <span style="font-size:13px;font-weight:800;color:#fff;" id="st-num-amarillas">0</span><span style="font-size:9px;">🟨</span>
+          <span style="font-size:9px;color:#a8c4b0;">·</span>
+          <span style="font-size:13px;font-weight:800;color:#fff;" id="st-num-rojas">0</span><span style="font-size:9px;">🟥</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZONA 2: campogramas — flex:1 ocupa lo que queda entre zona1, slicer y zona3 -->
+  <div style="flex:1;min-height:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;">
+
+    <!-- cabecera filtros -->
+    <div style="height:32px;flex-shrink:0;padding:0 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;">
+      <span style="font-size:8px;font-weight:600;color:#c8ddd0;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px;flex-shrink:0;">Campogramas</span>
+      <button onclick="setFiltroTipo('todos',this)" class="filtro-btn filtro-btn-active">Todos</button>
+      <button onclick="setFiltroTipo('pase-bueno',this)" class="filtro-btn">↗ Pase</button>
+      <button onclick="setFiltroTipo('pase-peligro',this)" class="filtro-btn">🔑 Pase peligroso</button>
+      <button onclick="setFiltroTipo('perdida',this)" class="filtro-btn">↩ Pérdida</button>
+      <button onclick="setFiltroTipo('recuperacion',this)" class="filtro-btn">↩ Recuperación</button>
+      <button onclick="setFiltroTipo('tiro-fuera',this)" class="filtro-btn">↗ Tiro fuera</button>
+      <button onclick="setFiltroTipo('tiro-puerta',this)" class="filtro-btn">🎯 Tiro puerta</button>
+      <button onclick="setFiltroTipo('gol',this)" class="filtro-btn">⚽ Gol</button>
+      <button onclick="setFiltroTipo('falta',this)" class="filtro-btn">⚠ Falta</button>
+      <button onclick="setFiltroTipo('falta-peligro',this)" class="filtro-btn">🔴 Falta peligrosa</button>
+      <button onclick="setFiltroTipo('amarilla',this)" class="filtro-btn">🟨 Amarilla</button>
+      <button onclick="setFiltroTipo('roja',this)" class="filtro-btn">🟥 Roja</button>
+      <button onclick="setFiltroTipo('corner-favor',this)" class="filtro-btn">🚩 Corner</button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:5px;flex-shrink:0;">
+        <span style="font-size:8px;color:#5DCAA5;font-weight:600;" id="campo-viendo">Nuestros</span>
+        <!-- filtros rival — ocultos por defecto, ANTES del botón para que el botón no se mueva -->
+        <div id="filtros-rival" style="display:none;align-items:center;gap:3px;">
+          <button onclick="setFiltroTipo('gol-contra',this)" class="filtro-btn filtro-rival">⚽ Gol rival</button>
+          <button onclick="setFiltroTipo('tiro-contra',this)" class="filtro-btn filtro-rival">🎯 Tiro rival</button>
+          <button onclick="setFiltroTipo('pase-contra',this)" class="filtro-btn filtro-rival">🔑 Pase rival</button>
+          <button onclick="setFiltroTipo('ocasion-contra',this)" class="filtro-btn filtro-rival">🔥 Ocasión</button>
+          <button onclick="setFiltroTipo('falta-contra',this)" class="filtro-btn filtro-rival">⚠ Falta rival</button>
+          <button onclick="setFiltroTipo('corner-contra',this)" class="filtro-btn filtro-rival">🚩 Corner rival</button>
+        </div>
+        <!-- btn-rival SIEMPRE al final — posición fija -->
+        <button id="btn-rival" onclick="toggleRival()" style="font-size:8px;font-weight:600;padding:2px 7px;border-radius:8px;border:1px solid #3a5044;background:rgba(255,255,255,0.03);color:#a8c4b0;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0;">Ver rival</button>
+        <span style="font-size:8px;color:#a8c4b0;" id="slicer-count">—</span>
+      </div>
+    </div>
+
+    <!-- 4 columnas: jugadores | acciones | gráficas | calor -->
+    <div style="flex:1;min-height:0;display:grid;grid-template-columns:155px 1fr 220px 1fr;">
+
+      <!-- jugadores -->
+      <div id="players-panel" style="border-right:1px solid var(--border);padding:5px 4px;overflow-y:auto;">
+        <div style="font-size:7px;font-weight:600;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;padding:0 2px;">Jugadores</div>
+        <div id="players-list"></div>
+      </div>
+
+      <!-- mapa acciones -->
+      <div style="padding:5px 6px;background:#080d0a;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;">
+        <div style="font-size:7px;color:#a8c4b0;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px;">Mapa de acciones</div>
+        <svg id="campo-acciones" viewBox="3 -2 664 434" preserveAspectRatio="xMidYMid meet" style="width:100%;flex:1;min-height:0;display:block;border-radius:2px;">
+          <rect width="670" height="448" fill="#145a2e"/>
+          <rect x="0" y="0" width="83" height="448" fill="#176333"/><rect x="167" y="0" width="83" height="448" fill="#176333"/><rect x="335" y="0" width="83" height="448" fill="#176333"/><rect x="502" y="0" width="83" height="448" fill="#176333"/>
+          <rect x="20" y="20" width="630" height="408" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2"/>
+          <!-- VALLA LED ELECTRÓNICA — fuera del campo -->
+          <defs>
+            <linearGradient id="ledScreenA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1a1a2e" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#0d0d1a" stop-opacity="1"/>
+            </linearGradient>
+            <linearGradient id="ledFrameA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#555" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#222" stop-opacity="1"/>
+            </linearGradient>
+            <linearGradient id="ledDepthA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1a1a1a" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#0a0a0a" stop-opacity="1"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="335" cy="19" rx="320" ry="3" fill="rgba(0,0,0,0.3)"/>
+          <rect x="20" y="16" width="630" height="4" fill="url(#ledDepthA)"/>
+          <rect x="20" y="2" width="630" height="14" fill="url(#ledFrameA)" rx="1"/>
+          <rect x="22" y="3" width="626" height="12" fill="url(#ledScreenA)" rx="0.5"/>
+          <line x1="22" y1="6" x2="648" y2="6" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="22" y1="9" x2="648" y2="9" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="22" y1="12" x2="648" y2="12" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="127" y1="3" x2="127" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="232" y1="3" x2="232" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="335" y1="3" x2="335" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="440" y1="3" x2="440" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="545" y1="3" x2="545" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <text x="335" y="13" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9" font-weight="800" fill="#00ff88" letter-spacing="2" opacity="0.95" transform="skewX(-5) translate(14,0)">tactiqfutbol.es  ·  ANÁLISIS TÁCTICO CON INTELIGENCIA ARTIFICIAL</text>
+          <line x1="335" y1="20" x2="335" y2="428" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <circle cx="335" cy="224" r="55" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="20" y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="20" y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="617" y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="551" y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <line x1="335" y1="20" x2="335" y2="428" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <circle cx="335" cy="224" r="55" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <circle cx="335" cy="224" r="4" fill="rgba(255,255,255,0.85)"/>
+          <rect x="5" y="202" width="15" height="44" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+          <rect x="20" y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <rect x="20" y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <circle cx="86" cy="224" r="4" fill="rgba(255,255,255,0.85)"/>
+          <path d="M119,180 A55,55 0 0,1 119,268" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <rect x="650" y="202" width="15" height="44" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+          <rect x="617" y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <rect x="551" y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <circle cx="584" cy="224" r="4" fill="rgba(255,255,255,0.85)"/>
+          <path d="M551,180 A55,55 0 0,0 551,268" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+          <g id="dots-acciones"></g>
+          <!-- marca de agua -->
+          <text x="335" y="234" text-anchor="middle" font-family="Inter,sans-serif" font-size="28" font-weight="700" fill="rgba(255,255,255,0.18)" letter-spacing="-0.5" pointer-events="none">tactiq</text>
+        </svg>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:2px;font-size:7px;color:#a8c4b0;"><div style="width:5px;height:5px;border-radius:50%;background:#1D9E75;flex-shrink:0;"></div>Gol</div>
+          <div style="display:flex;align-items:center;gap:2px;font-size:7px;color:#a8c4b0;"><div style="width:5px;height:5px;border-radius:50%;background:#5DCAA5;flex-shrink:0;"></div>Tiro</div>
+          <div style="display:flex;align-items:center;gap:2px;font-size:7px;color:#a8c4b0;"><div style="width:5px;height:5px;border-radius:50%;background:#60a5fa;flex-shrink:0;"></div>Pase</div>
+          <div style="display:flex;align-items:center;gap:2px;font-size:7px;color:#a8c4b0;"><div style="width:5px;height:5px;border-radius:50%;background:#f87171;flex-shrink:0;"></div>Rival</div>
+        </div>
+      </div>
+
+      <!-- gráficas centrales: totales + temporal -->
+      <div style="padding:5px 6px;background:#0a0f0c;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;gap:6px;">
+        <!-- gráfica 1: barras por jugador -->
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;">
+          <div style="font-size:7px;color:#a8c4b0;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;flex-shrink:0;">Acciones por jugador</div>
+          <div id="chart-jugadores" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px;"></div>
+        </div>
+        <!-- divisor -->
+        <div style="height:1px;background:var(--border);flex-shrink:0;"></div>
+        <!-- gráfica donut: distribución de jugadas -->
+        <div style="flex-shrink:0;display:flex;flex-direction:column;">
+          <div style="font-size:7px;color:#a8c4b0;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Distribución jugadas</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <svg id="chart-donut" width="60" height="60" viewBox="0 0 60 60" style="flex-shrink:0;"></svg>
+            <div id="chart-donut-legend" style="display:flex;flex-direction:column;gap:2px;flex:1;overflow:hidden;"></div>
+          </div>
+        </div>
+        <!-- divisor -->
+        <div style="height:1px;background:var(--border);flex-shrink:0;"></div>
+        <!-- gráfica 2: columnas temporales (cada 15 min) -->
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;">
+          <div style="font-size:7px;color:#a8c4b0;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;flex-shrink:0;">Eventos por tramo</div>
+          <div id="chart-temporal" style="flex:1;display:flex;align-items:flex-end;gap:2px;padding-bottom:2px;"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:2px;flex-shrink:0;">
+            <span style="font-size:6px;color:#6a9a7a;">0-15'</span>
+            <span style="font-size:6px;color:#6a9a7a;">15-30'</span>
+            <span style="font-size:6px;color:#6a9a7a;">30-45'</span>
+            <span style="font-size:6px;color:#6a9a7a;">45-60'</span>
+            <span style="font-size:6px;color:#6a9a7a;">60-75'</span>
+            <span style="font-size:6px;color:#6a9a7a;">75-90'</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- mapa calor -->
+      <div style="padding:5px 6px;background:#080d0a;display:flex;flex-direction:column;min-height:0;">
+        <div style="font-size:7px;color:#a8c4b0;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px;">Mapa de calor</div>
+        <svg id="campo-calor" viewBox="3 -2 664 434" preserveAspectRatio="xMidYMid meet" style="width:100%;flex:1;min-height:0;display:block;border-radius:2px;">
+          <defs><filter id="blur-heat" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="22"/></filter></defs>
+          <rect width="670" height="448" fill="#1a4a2a"/>
+          <rect x="0" y="0" width="83" height="448" fill="#1d5430"/><rect x="167" y="0" width="83" height="448" fill="#1d5430"/><rect x="335" y="0" width="83" height="448" fill="#1d5430"/><rect x="502" y="0" width="83" height="448" fill="#1d5430"/>
+          <rect x="20" y="20" width="630" height="408" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <!-- VALLA LED ELECTRÓNICA — fuera del campo -->
+          <defs>
+            <linearGradient id="ledScreen2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1a1a2e" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#0d0d1a" stop-opacity="1"/>
+            </linearGradient>
+            <linearGradient id="ledFrame2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#555" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#222" stop-opacity="1"/>
+            </linearGradient>
+            <linearGradient id="ledDepth2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1a1a1a" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#0a0a0a" stop-opacity="1"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="335" cy="19" rx="320" ry="3" fill="rgba(0,0,0,0.3)"/>
+          <rect x="20" y="16" width="630" height="4" fill="url(#ledDepth2)"/>
+          <rect x="20" y="2" width="630" height="14" fill="url(#ledFrame2)" rx="1"/>
+          <rect x="22" y="3" width="626" height="12" fill="url(#ledScreen2)" rx="0.5"/>
+          <line x1="22" y1="6" x2="648" y2="6" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="22" y1="9" x2="648" y2="9" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="22" y1="12" x2="648" y2="12" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="127" y1="3" x2="127" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="232" y1="3" x2="232" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="335" y1="3" x2="335" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="440" y1="3" x2="440" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <line x1="545" y1="3" x2="545" y2="16" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <text x="335" y="13" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9" font-weight="800" fill="#00ff88" letter-spacing="2" opacity="0.95" transform="skewX(-5) translate(14,0)">tactiqfutbol.es  ·  ANÁLISIS TÁCTICO CON INTELIGENCIA ARTIFICIAL</text>
+          <line x1="335" y1="20" x2="335" y2="428" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <circle cx="335" cy="224" r="55" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="20" y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="20" y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="617" y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <rect x="551" y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <g id="heat-layer" filter="url(#blur-heat)"></g>
+          <!-- marca de agua -->
+          <text x="335" y="234" text-anchor="middle" font-family="Inter,sans-serif" font-size="28" font-weight="700" fill="rgba(255,255,255,0.18)" letter-spacing="-0.5" pointer-events="none">tactiq</text>
+        </svg>
+        <div style="display:flex;gap:6px;margin-top:3px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:2px;font-size:7px;color:#a8c4b0;"><div style="width:5px;height:5px;border-radius:50%;background:#ef4444;flex-shrink:0;"></div>Alta</div>
+          <div style="display:flex;align-items:center;gap:2px;font-size:7px;color:#a8c4b0;"><div style="width:5px;height:5px;border-radius:50%;background:#f97316;flex-shrink:0;"></div>Media</div>
+          <div style="display:flex;align-items:center;gap:2px;font-size:7px;color:#a8c4b0;"><div style="width:5px;height:5px;border-radius:50%;background:#facc15;flex-shrink:0;"></div>Baja</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- slicer — altura fija 36px -->
+    <div style="height:36px;flex-shrink:0;border-top:1px solid var(--border);padding:0 14px;display:flex;flex-direction:column;justify-content:center;gap:2px;">
+      <div class="slider-container" style="margin:8px 0 2px;">
+        <div class="slider-track"></div>
+        <div class="slider-fill" id="slider-fill"></div>
+        <div id="slicer-label" style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:#5DCAA5;white-space:nowrap;pointer-events:none;background:var(--bg2);padding:0 3px;border-radius:2px;">0' — 90'</div>
+        <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);pointer-events:none;">
+          <div style="position:absolute;left:0%;width:2px;height:7px;background:#5a7a66;border-radius:1px;transform:translateX(-50%) translateY(-50%);"></div>
+          <div style="position:absolute;left:25%;width:1px;height:4px;background:#3a5044;border-radius:1px;transform:translateX(-50%) translateY(-50%);"></div>
+          <div style="position:absolute;left:50%;width:2px;height:7px;background:#5a7a66;border-radius:1px;transform:translateX(-50%) translateY(-50%);"></div>
+          <div style="position:absolute;left:75%;width:1px;height:4px;background:#3a5044;border-radius:1px;transform:translateX(-50%) translateY(-50%);"></div>
+          <div style="position:absolute;left:100%;width:2px;height:7px;background:#5a7a66;border-radius:1px;transform:translateX(-50%) translateY(-50%);"></div>
+        </div>
+        <input type="range" class="slider-input" id="slider-min" min="0" max="90" value="0"/>
+        <input type="range" class="slider-input" id="slider-max" min="0" max="90" value="90"/>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:7px;color:#6a9a7a;">0'</span>
+        <span style="font-size:7px;color:#6a9a7a;">22'</span>
+        <span style="font-size:7px;color:#6a9a7a;">45'</span>
+        <span style="font-size:7px;color:#6a9a7a;">67'</span>
+        <span style="font-size:7px;color:#6a9a7a;">90'</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZONA 3: eventos + IA — altura fija 200px -->
+  <div style="height:200px;flex-shrink:0;display:grid;grid-template-columns:0.7fr 2fr;gap:8px;">
+    <div class="card" style="display:flex;flex-direction:column;overflow:hidden;">
+      <div class="card-hdr" style="flex-shrink:0;padding:5px 10px;">
+        <span class="card-title">Eventos</span>
+        <span style="font-size:8px;color:#a8c4b0;" id="tabla-count">—</span>
+      </div>
+      <div style="overflow-y:auto;flex:1;">
+        <table class="ev-table">
+          <thead><tr>
+            <th style="width:36px;position:sticky;top:0;background:#0a0e0c;padding:4px 6px;">Min</th>
+            <th style="position:sticky;top:0;background:#0a0e0c;padding:4px 6px;">Evento</th>
+            <th style="position:sticky;top:0;background:#0a0e0c;padding:4px 6px;">Jugador</th>
+          </tr></thead>
+          <tbody id="eventos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;overflow:hidden;">
+      <div class="card-hdr" style="flex-shrink:0;padding:5px 10px;">
+        <span class="card-title">Analiza con IA</span>
+        <span style="font-size:8px;color:var(--green);background:rgba(29,158,117,0.1);padding:1px 6px;border-radius:8px;border:1px solid rgba(29,158,117,0.2);">claude-powered</span>
+        <span id="chat-counter" style="font-size:8px;color:#a8c4b0;margin-left:auto;">0/10 preguntas</span>
+      </div>
+      <div id="chat-messages" style="flex:1;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:5px;">
+        <div class="msg-ia">
+          <div class="msg-name" style="color:var(--green);">tactiq IA</div>
+          <div class="msg-text" id="chat-intro">Cargando análisis...</div>
+        </div>
+      </div>
+      <div id="chat-suggestions" style="padding:4px 8px;display:flex;flex-wrap:wrap;gap:3px;border-top:1px solid var(--border);flex-shrink:0;">
+        <span class="sugg" onclick="askSugg(this)">¿Dónde perdemos el balón?</span>
+        <span class="sugg" onclick="askSugg(this)">Análisis defensivo</span>
+        <span class="sugg" onclick="askSugg(this)">Jugadores destacados</span>
+        <span class="sugg" onclick="askSugg(this)">¿Qué mejorar?</span>
+      </div>
+      <div style="padding:5px 8px;border-top:1px solid var(--border);display:flex;gap:5px;align-items:center;flex-shrink:0;">
+        <input class="chat-input" id="chat-input" type="text" placeholder="Pregunta sobre este partido..." style="font-size:10px;padding:5px 9px;"/>
+        <button class="chat-send" onclick="sendChat()" style="width:28px;height:28px;">
+          <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M1 7L13 7M13 7L8 2M13 7L8 12" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+// ═══════════════════════════════════════════════
+// DATOS
+// ═══════════════════════════════════════════════
+let partido = null;
+let eventosFiltrados = [];
+let jugadoresActivos = new Set();
+let sliderMin = 0, sliderMax = 90;
+
+// Colores por tipo de evento
+const TIPO_COLOR = {
+  // Nuestros — verdes y azules
+  'gol':'#1D9E75','tiro-puerta':'#5DCAA5','tiro-fuera':'#a3e635',
+  'pase-peligro':'#60a5fa','pase-bueno':'#93c5fd',
+  'perdida':'#fb923c','falta':'#facc15','falta-peligro':'#f97316',
+  'amarilla':'#fcd34d','roja':'#f87171',
+  'recuperacion':'#34d399','corner-favor':'#818cf8','offside':'#e879f9',
+  // Rival — rojos y naranjas diferenciados
+  'gol-contra':'#dc2626',       // rojo intenso
+  'tiro-contra':'#f87171',      // rojo suave
+  'tiro-contra-fuera':'#fca5a5',// rojo muy suave
+  'pase-contra':'#fb923c',      // naranja
+  'corner-contra':'#f59e0b',    // ámbar
+  'falta-contra':'#fcd34d',     // amarillo
+  'ocasion-contra':'#ef4444',   // rojo medio
+};
+const TIPO_LABEL = {
+  'gol':'⚽ Gol','tiro-puerta':'🎯 Tiro a puerta','tiro-fuera':'↗ Tiro fuera',
+  'pase-peligro':'🔑 Pase peligroso','pase-bueno':'↗ Pase',
+  'perdida':'↩ Pérdida','recuperacion':'↩ Recuperación',
+  'falta':'⚠ Falta recibida','falta-peligro':'🔴 Falta peligrosa',
+  'amarilla':'🟨 T. Amarilla','roja':'🟥 T. Roja',
+  'gol-contra':'⚽ Gol recibido','tiro-contra':'🎯 Tiro recibido',
+  'tiro-contra-fuera':'↗ Tiro fuera rival','pase-contra':'🔑 Pase peligroso rival',
+  'corner-contra':'🚩 Corner en contra','corner-favor':'🚩 Corner a favor',
+  'falta-contra':'⚠ Falta cometida','ocasion-contra':'🔥 Ocasión rival',
+  'offside':'🚩 Fuera de juego','inicio-partido':'🟢 Inicio','fin-partido':'🔴 Final',
+};
+
+function tipoLabel(t){ return TIPO_LABEL[t] || t; }
+function tipoColor(t){ return TIPO_COLOR[t] || '#8aaa96'; }
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Leer datos del localStorage
+  const raw = localStorage.getItem('tactiq_ultimo_partido');
+  if(raw){
+    try { partido = JSON.parse(raw); }
+    catch(e){ partido = null; }
+  }
+  // Si no hay datos reales mostrar pantalla vacía
+  if(!partido || !partido.eventos){
+    partido = { local:'—', visitante:'—', eventos:[], rol:'Local', jornada:'', fecha:'', formacion:'', scoreLocal:0, scoreVisitante:0 };
+  }
+  setTimeout(() => {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'flex';
+    initUI();
+  }, 600);
+});
+
+function initUI(){
+  renderHeader();
+  renderStats();
+  buildPlayersList();
+  initSlider();     // slider PRIMERO para que sliderMax sea correcto
+  renderCampos();
+  renderTabla();
+  generarIntroIA();
+}
+
+// ═══════════════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════════════
+function renderHeader(){
+  const p = partido;
+  document.getElementById('ph-meta').textContent =
+    `${p.jornada ? 'J'+p.jornada : '—'} · ${p.fecha ? formatFecha(p.fecha) : '—'} · ${p.rol || '—'}`;
+
+  const local = p.rol === 'Local' ? p.local : p.visitante;
+  const visit = p.rol === 'Local' ? p.visitante : p.local;
+  const sl = p.scoreLocal || 0, sv = p.scoreVisitante || 0;
+  const nosGoles = p.rol === 'Local' ? sl : sv;
+  const rivGoles = p.rol === 'Local' ? sv : sl;
+
+  document.getElementById('ph-score').innerHTML =
+    `<span style="color:var(--ink)">${local}</span> <span style="color:#1D9E75">${nosGoles}</span> <span style="color:var(--ghost);font-weight:300"> — </span><span style="color:#f87171">${rivGoles}</span> <span style="color:var(--ink)">${visit}</span>`;
+
+  const res = nosGoles > rivGoles ? 'Victoria' : nosGoles < rivGoles ? 'Derrota' : 'Empate';
+  const resEl = document.getElementById('ph-resultado');
+  resEl.textContent = res;
+  if(res === 'Victoria'){ resEl.style.background='rgba(29,158,117,0.12)';resEl.style.color='#1D9E75';resEl.style.borderColor='rgba(29,158,117,0.2)'; }
+  else if(res === 'Derrota'){ resEl.style.background='rgba(248,113,113,0.1)';resEl.style.color='#f87171';resEl.style.borderColor='rgba(248,113,113,0.2)'; }
+  else { resEl.style.background='rgba(252,211,77,0.1)';resEl.style.color='#fcd34d';resEl.style.borderColor='rgba(252,211,77,0.2)'; }
+
+  const noOblig = partido.eventos.filter(e=>!e.obligatorio);
+  document.getElementById('ph-eventos').textContent = noOblig.length + ' eventos';
+}
+
+function formatFecha(f){
+  if(!f) return '—';
+  try{
+    const d = new Date(f);
+    return d.toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+  }catch(e){ return f; }
+}
+
+// ═══════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════
+function renderStats(){
+  const evs = partido.eventos.filter(e=>!e.obligatorio);
+  const goles = evs.filter(e=>e.tipo==='gol').length;
+  const golesContra = evs.filter(e=>e.tipo==='gol-contra').length;
+  const tiros = evs.filter(e=>e.tipo==='tiro-puerta').length;
+  const tirosFuera = evs.filter(e=>e.tipo==='tiro-fuera').length;
+  const pases = evs.filter(e=>e.tipo==='pase-peligro').length;
+  const faltas = evs.filter(e=>e.tipo==='falta'||e.tipo==='falta-peligro').length;
+  const faltasPeligro = evs.filter(e=>e.tipo==='falta-peligro').length;
+  const amarillas = evs.filter(e=>e.tipo==='amarilla').length;
+  const rojas = evs.filter(e=>e.tipo==='roja').length;
+
+  const setEl = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  setEl('st-goles', goles);
+  setEl('st-goles-sub', golesContra > 0 ? golesContra+' encajados' : '0 encajados');
+  setEl('st-tiros', tiros);
+  setEl('st-tiros-sub', tirosFuera+' fuera');
+  const recup = evs.filter(e=>e.tipo==='recuperacion').length;
+  setEl('st-recup', recup);
+  setEl('st-pases', pases);
+  setEl('st-faltas', faltas);
+  setEl('st-faltas-sub', faltasPeligro+' peligrosas');
+  // Tarjetas como iconos
+  const am = document.getElementById('st-num-amarillas');
+  const ro = document.getElementById('st-num-rojas');
+  if(am) am.textContent = amarillas;
+  if(ro) ro.textContent = rojas;
+}
+
+// ═══════════════════════════════════════════════
+// JUGADORES
+// ═══════════════════════════════════════════════
+function buildPlayersList(){
+  const evs = partido.eventos.filter(e=>!e.obligatorio && e.jugador && e.jugador !== '—' && e.jugador !== '— Rival');
+  const jugSet = new Set(evs.map(e=>e.jugador));
+  const jugs = Array.from(jugSet).sort((a,b)=>{
+    const na = parseInt(a.split('.')[0])||99;
+    const nb = parseInt(b.split('.')[0])||99;
+    return na - nb;
+  });
+  jugs.forEach(j => jugadoresActivos.add(j));
+
+  const container = document.getElementById('players-list');
+  container.innerHTML = '';
+
+  // "Todos" checkbox
+  const todoItem = document.createElement('div');
+  todoItem.className = 'player-item';
+  todoItem.style.marginBottom = '4px';
+  todoItem.innerHTML = `<div class="player-cb checked" id="cb-todos"></div><span style="font-size:10px;color:#c8ddd0;font-weight:500;">Todos</span>`;
+  todoItem.onclick = toggleTodos;
+  container.appendChild(todoItem);
+
+  jugs.forEach(j => {
+    const parts = j.split('.');
+    const num = parts[0]?.trim() || '';
+    const name = parts.slice(1).join('.').trim();
+    const item = document.createElement('div');
+    item.className = 'player-item';
+    item.dataset.jugador = j;
+    item.innerHTML = `<div class="player-cb checked" data-cb="${j}"></div><span class="player-num">${num}.</span><span class="player-name">${name || j}</span>`;
+    item.onclick = () => toggleJugador(j, item);
+    container.appendChild(item);
+  });
+}
+
+function toggleJugador(j, item){
+  const cb = item.querySelector('.player-cb');
+  if(jugadoresActivos.has(j)){
+    jugadoresActivos.delete(j);
+    cb.classList.remove('checked');
+    cb.innerHTML = '';
+  } else {
+    jugadoresActivos.add(j);
+    cb.classList.add('checked');
+  }
+  updateTodosCb();
+  renderCampos();
+  renderTabla();
+}
+
+function toggleTodos(){
+  const allJugs = Array.from(document.querySelectorAll('[data-cb]')).map(el=>el.dataset.cb);
+  const allActive = allJugs.every(j => jugadoresActivos.has(j));
+  if(allActive){
+    jugadoresActivos.clear();
+    document.querySelectorAll('[data-cb]').forEach(cb=>{cb.classList.remove('checked');cb.innerHTML='';});
+  } else {
+    allJugs.forEach(j=>jugadoresActivos.add(j));
+    document.querySelectorAll('[data-cb]').forEach(cb=>cb.classList.add('checked'));
+  }
+  const cbTodos = document.getElementById('cb-todos');
+  if(cbTodos) cbTodos.classList.toggle('checked', !allActive);
+  renderCampos(); renderTabla();
+}
+
+function updateTodosCb(){
+  const allJugs = Array.from(document.querySelectorAll('[data-cb]')).map(el=>el.dataset.cb);
+  const allActive = allJugs.length > 0 && allJugs.every(j=>jugadoresActivos.has(j));
+  const cbTodos = document.getElementById('cb-todos');
+  if(cbTodos) cbTodos.classList.toggle('checked', allActive);
+}
+
+// ═══════════════════════════════════════════════
+// SLICER
+// ═══════════════════════════════════════════════
+function initSlider(){
+  const slMin = document.getElementById('slider-min');
+  const slMax = document.getElementById('slider-max');
+  slMin.min = 0; slMin.max = 90; slMin.value = 0;
+  slMax.min = 0; slMax.max = 90; slMax.value = 90;
+  sliderMin = 0; sliderMax = 90;
+  updateSliderFill();
+  slMin.addEventListener('input', () => {
+    if(parseInt(slMin.value) > parseInt(slMax.value)-1) slMin.value = parseInt(slMax.value)-1;
+    sliderMin = parseInt(slMin.value);
+    updateSliderFill(); renderCampos(); renderTabla();
+  });
+  slMax.addEventListener('input', () => {
+    if(parseInt(slMax.value) < parseInt(slMin.value)+1) slMax.value = parseInt(slMin.value)+1;
+    sliderMax = parseInt(slMax.value);
+    updateSliderFill(); renderCampos(); renderTabla();
+  });
+}
+
+function updateSliderFill(){
+  const slMin = document.getElementById('slider-min');
+  const slMax = document.getElementById('slider-max');
+  const max = parseInt(slMax.max) || 90;
+  const pMin = (parseInt(slMin.value)/max)*100;
+  const pMax = (parseInt(slMax.value)/max)*100;
+  const fillEl = document.getElementById('slider-fill');
+  if(fillEl){ fillEl.style.left = pMin+'%'; fillEl.style.width = (pMax-pMin)+'%'; }
+  const lbl = document.getElementById('slicer-label');
+  if(lbl){
+    lbl.textContent = `${slMin.value}' — ${slMax.value}'`;
+    lbl.style.left = ((pMin + pMax)/2) + '%';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// FILTRAR EVENTOS
+// ═══════════════════════════════════════════════
+let filtrosTipo = new Set(); // vacío = todos
+let verRival = false;
+
+const TIPOS_CONTRA = ['gol-contra','tiro-contra','tiro-contra-fuera','pase-contra','corner-contra','falta-contra','ocasion-contra'];
+
+function setFiltroTipo(tipo, btn){
+  // Si estamos viendo rival y el botón no es de rival, avisar
+  if(verRival && !btn.closest('#filtros-rival') && tipo !== 'todos'){
+    let aviso = document.getElementById('aviso-rival');
+    if(!aviso){
+      aviso = document.createElement('div');
+      aviso.id = 'aviso-rival';
+      aviso.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#131a16;border:1px solid rgba(248,113,113,0.5);border-radius:8px;padding:6px 14px;font-family:Inter,sans-serif;font-size:10px;color:#f87171;z-index:500;white-space:nowrap;pointer-events:none;';
+      aviso.textContent = '⚠ Filtro rival activo — desactívalo para ver nuestros datos';
+      const zona = document.querySelector('.content');
+      if(zona){ zona.style.position='relative'; zona.appendChild(aviso); }
+    }
+    clearTimeout(aviso._t);
+    aviso.style.display='block';
+    aviso._t = setTimeout(()=>{ if(aviso) aviso.style.display='none'; }, 3000);
+    return;
+  }
+  if(tipo === 'todos'){
+    filtrosTipo.clear();
+    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('filtro-btn-active'));
+    btn.classList.add('filtro-btn-active');
+  } else {
+    const btnTodos = document.querySelector('.filtro-btn');
+    btnTodos.classList.remove('filtro-btn-active');
+    if(filtrosTipo.has(tipo)){
+      filtrosTipo.delete(tipo);
+      btn.classList.remove('filtro-btn-active');
+    } else {
+      filtrosTipo.add(tipo);
+      btn.classList.add('filtro-btn-active');
+    }
+    if(filtrosTipo.size === 0) btnTodos.classList.add('filtro-btn-active');
+  }
+  renderCampos(); renderTabla();
+}
+
+function toggleRival(){
+  verRival = !verRival;
+  const btn = document.getElementById('btn-rival');
+  const viendo = document.getElementById('campo-viendo');
+  const filtrosRival = document.getElementById('filtros-rival');
+  const playersPanel = document.getElementById('players-panel');
+  filtrosTipo.clear();
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('filtro-btn-active'));
+  if(verRival){
+    btn.style.background = 'rgba(248,113,113,0.15)';
+    btn.style.borderColor = 'rgba(248,113,113,0.4)';
+    btn.style.color = '#f87171';
+    btn.textContent = '✕ Rival';
+    if(viendo){ viendo.textContent = 'Rival'; viendo.style.color = '#f87171'; }
+    if(filtrosRival) filtrosRival.style.display = 'flex';
+    if(playersPanel){ playersPanel.style.opacity='0.3'; playersPanel.style.pointerEvents='none'; }
+  } else {
+    btn.style.background = 'rgba(255,255,255,0.03)';
+    btn.style.borderColor = '#3a5044';
+    btn.style.color = '#5a7a66';
+    btn.textContent = 'Ver rival';
+    if(viendo){ viendo.textContent = 'Nuestros'; viendo.style.color = '#5DCAA5'; }
+    if(filtrosRival) filtrosRival.style.display = 'none';
+    if(playersPanel){ playersPanel.style.opacity='1'; playersPanel.style.pointerEvents='auto'; }
+    const btnTodos = document.querySelector('.filtro-btn');
+    if(btnTodos) btnTodos.classList.add('filtro-btn-active');
+  }
+  renderCampos(); renderTabla();
+}
+
+function getEventosFiltrados(){
+  return partido.eventos.filter(e => {
+    if(e.obligatorio) return false;
+
+    // FILTRO TEMPORAL — estricto, siempre en minutos
+    const minEv = (e.sec != null) ? Math.floor(e.sec/60) : (parseInt(e.min) || 0);
+    if(minEv < sliderMin || minEv > sliderMax) return false;
+
+    // Determinar si es evento del rival
+    const esContra = TIPOS_CONTRA.includes(e.tipo) || e.jugador === '— Rival';
+
+    // FILTRO RIVAL — mostrar solo rival o solo nuestros
+    if(!verRival && esContra) return false;
+    if(verRival && !esContra) return false;
+
+    // FILTRO JUGADORES — si hay jugadores seleccionados, filtrar
+    if(!esContra && jugadoresActivos.size > 0 && !jugadoresActivos.has(e.jugador)) return false;
+
+    // FILTRO TIPO — si hay tipos seleccionados, el evento debe ser uno de ellos
+    if(filtrosTipo.size > 0 && !filtrosTipo.has(e.tipo)) return false;
+
+    return true;
+  });
+}
+// ═══════════════════════════════════════════════
+// GRÁFICAS CENTRALES
+// ═══════════════════════════════════════════════
+function renderChart(evs){
+  // --- GRÁFICA 1: barras por jugador ---
+  const container = document.getElementById('chart-jugadores');
+  if(container){
+    container.innerHTML = '';
+    const counts = {};
+    evs.filter(e => e.jugador && e.jugador !== '— Rival' && e.jugador !== '—').forEach(e => {
+      const nombre = e.jugador.split('.').slice(1).join('.').trim() || e.jugador;
+      counts[nombre] = (counts[nombre] || 0) + 1;
+    });
+    const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,9);
+    if(sorted.length === 0){
+      container.innerHTML = '<div style="font-size:8px;color:#6a9a7a;padding:4px;">Sin datos</div>';
+    } else {
+      const max = sorted[0][1];
+      sorted.forEach(([nombre, n]) => {
+        const pct = Math.round((n/max)*100);
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        row.innerHTML = `
+          <div style="font-size:7px;color:#a8c4b0;width:52px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nombre}</div>
+          <div style="flex:1;background:#1e2d24;border-radius:2px;height:7px;overflow:hidden;">
+            <div style="height:100%;background:var(--green);border-radius:2px;width:${pct}%;"></div>
+          </div>
+          <div style="font-size:7px;color:#5DCAA5;font-weight:600;width:12px;text-align:right;flex-shrink:0;">${n}</div>
+        `;
+        container.appendChild(row);
+      });
+    }
+  }
+
+  // --- GRÁFICA DONUT: distribución de tipos de jugada ---
+  const donutSvg = document.getElementById('chart-donut');
+  const donutLegend = document.getElementById('chart-donut-legend');
+  if(donutSvg && donutLegend){
+    donutSvg.innerHTML = '';
+    donutLegend.innerHTML = '';
+    // Solo jugadas nuestras (no rival)
+    const nuestros = evs.filter(e => e.jugador !== '— Rival' && !['gol-contra','tiro-contra','tiro-contra-fuera','pase-contra','corner-contra','falta-contra','ocasion-contra'].includes(e.tipo));
+    const tipoCount = {};
+    nuestros.forEach(e => { tipoCount[e.tipo] = (tipoCount[e.tipo]||0)+1; });
+    const sorted = Object.entries(tipoCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const total = sorted.reduce((s,[,n])=>s+n, 0);
+    if(total > 0){
+      const colors = ['#1D9E75','#5DCAA5','#0F6E56','#8aaa96','#3a7a5a','#2a5a40'];
+      const cx=30, cy=30, r=24, inner=14;
+      let angle = -Math.PI/2;
+      sorted.forEach(([tipo, n], i) => {
+        const slice = (n/total) * Math.PI * 2;
+        const x1 = cx + r*Math.cos(angle);
+        const y1 = cy + r*Math.sin(angle);
+        const x2 = cx + r*Math.cos(angle+slice);
+        const y2 = cy + r*Math.sin(angle+slice);
+        const xi1 = cx + inner*Math.cos(angle);
+        const yi1 = cy + inner*Math.sin(angle);
+        const xi2 = cx + inner*Math.cos(angle+slice);
+        const yi2 = cy + inner*Math.sin(angle+slice);
+        const large = slice > Math.PI ? 1 : 0;
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', `M${xi1},${yi1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${xi2},${yi2} A${inner},${inner} 0 ${large},0 ${xi1},${yi1} Z`);
+        path.setAttribute('fill', colors[i]);
+        path.setAttribute('opacity','0.9');
+        donutSvg.appendChild(path);
+        angle += slice;
+        // leyenda
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:3px;overflow:hidden;';
+        row.innerHTML = `<div style="width:5px;height:5px;border-radius:50%;background:${colors[i]};flex-shrink:0;"></div><div style="font-size:6.5px;color:#a8c4b0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tipoLabel(tipo)||tipo} <span style="color:${colors[i]};font-weight:700;">${n}</span></div>`;
+        donutLegend.appendChild(row);
+      });
+    } else {
+      donutSvg.innerHTML = '<circle cx="30" cy="30" r="24" fill="#1e2d24"/><circle cx="30" cy="30" r="14" fill="#0a0e0c"/>';
+    }
+  }
+  const temporal = document.getElementById('chart-temporal');
+  if(temporal){
+    temporal.innerHTML = '';
+    const tramos = [0,0,0,0,0,0]; // 0-15, 15-30, 30-45, 45-60, 60-75, 75-90
+    evs.forEach(e => {
+      const min = e.sec != null ? Math.floor(e.sec/60) : (parseInt(e.min)||0);
+      const idx = Math.min(Math.floor(min/15), 5);
+      tramos[idx]++;
+    });
+    const maxT = Math.max(1, ...tramos);
+    const colors = ['#1D9E75','#1D9E75','#5DCAA5','#5DCAA5','#1D9E75','#1D9E75'];
+    tramos.forEach((n, i) => {
+      const pct = Math.round((n/maxT)*100);
+      const col = document.createElement('div');
+      col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;';
+      col.innerHTML = `
+        <div style="font-size:6px;color:#5DCAA5;font-weight:600;">${n||''}</div>
+        <div style="width:100%;background:#1e2d24;border-radius:2px 2px 0 0;display:flex;align-items:flex-end;height:40px;">
+          <div style="width:100%;background:${colors[i]};border-radius:2px 2px 0 0;height:${Math.max(2,pct)}%;opacity:0.85;"></div>
+        </div>
+      `;
+      temporal.appendChild(col);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CAMPOS SVG
+// ═══════════════════════════════════════════════
+function renderCampos(){
+  const evs = getEventosFiltrados();
+  document.getElementById('slicer-count').textContent = evs.length + ' eventos';
+
+  // Gráfica central
+  renderChart(evs);
+
+  // Coordenadas: campo real x=20..650, y=20..428 dentro del SVG 670x448
+  // viewBox="3 -2 664 434" — el campo ocupa casi todo el viewBox
+  // x_svg = 20 + (x/100)*630   y_svg = 20 + (y/100)*408
+  function toSvgX(x){ return 20 + (parseFloat(x)/100)*630; }
+  function toSvgY(y){ return 20 + (parseFloat(y)/100)*408; }
+
+  // CAMPO 1: puntos (mapa de acciones)
+  const dotsLayer = document.getElementById('dots-acciones');
+  dotsLayer.innerHTML = '';
+  evs.forEach(ev => {
+    if(!ev.x || !ev.y || ev.x === '—' || ev.y === '—') return;
+    const sx = toSvgX(ev.x), sy = toSvgY(ev.y);
+    if(isNaN(sx)||isNaN(sy)) return;
+    const color = tipoColor(ev.tipo);
+    const isGol = ev.tipo === 'gol' || ev.tipo === 'gol-contra';
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx', sx);
+    dot.setAttribute('cy', sy);
+    dot.setAttribute('r', isGol ? 9 : 5);
+    dot.setAttribute('fill', color);
+    dot.setAttribute('opacity', isGol ? '0.95' : '0.72');
+    dot.setAttribute('stroke','rgba(0,0,0,0.35)');
+    dot.setAttribute('stroke-width','0.5');
+    dotsLayer.appendChild(dot);
+    if(isGol){
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', sx); txt.setAttribute('y', sy+4);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('font-size','10'); txt.setAttribute('fill','white'); txt.setAttribute('font-weight','700');
+      txt.textContent = 'G';
+      dotsLayer.appendChild(txt);
+    }
+  });
+
+  // CAMPO 2: mapa de calor — usa los mismos eventos filtrados
+  const heatLayer = document.getElementById('heat-layer');
+  heatLayer.innerHTML = '';
+  const evsConCoordenadas = evs.filter(ev => ev.x && ev.y && ev.x !== '—' && ev.y !== '—');
+
+  if(evsConCoordenadas.length === 0) return;
+
+  const COLS = 11, ROWS = 7;
+  const density = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  evsConCoordenadas.forEach(ev => {
+    const x = parseFloat(ev.x), y = parseFloat(ev.y);
+    if(isNaN(x)||isNaN(y)) return;
+    const col = Math.min(Math.floor((x/100)*COLS), COLS-1);
+    const row = Math.min(Math.floor((y/100)*ROWS), ROWS-1);
+    density[row][col]++;
+  });
+
+  const maxD = Math.max(1, ...density.flat());
+  const cellW = 630/COLS, cellH = 408/ROWS;
+  for(let r=0; r<ROWS; r++){
+    for(let c=0; c<COLS; c++){
+      if(density[r][c] === 0) continue;
+      const norm = density[r][c] / maxD;
+      const color = norm > 0.6 ? '#ef4444' : norm > 0.3 ? '#f97316' : '#facc15';
+      const blob = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      blob.setAttribute('cx', 20 + c*cellW + cellW/2);
+      blob.setAttribute('cy', 20 + r*cellH + cellH/2);
+      blob.setAttribute('r', Math.max(cellW, cellH) * 1.1);
+      blob.setAttribute('fill', color);
+      blob.setAttribute('opacity', (0.15 + norm * 0.75).toFixed(2));
+      heatLayer.appendChild(blob);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// TABLA EVENTOS
+// ═══════════════════════════════════════════════
+function renderTabla(){
+  const evs = getEventosFiltrados();
+  document.getElementById('tabla-count').textContent = evs.length + ' eventos';
+  const tbody = document.getElementById('eventos-tbody');
+  tbody.innerHTML = '';
+  if(evs.length === 0){
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--ghost);font-size:11px;">Sin eventos en este rango</td></tr>';
+    return;
+  }
+  evs.forEach(ev => {
+    const color = tipoColor(ev.tipo);
+    const minDisplay = ev.sec != null ? Math.floor(ev.sec/60) : (parseInt(ev.min)||0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:#a8c4b0;white-space:nowrap;">${minDisplay}'</td>
+      <td><span class="ev-badge" style="background:${color}18;color:${color};border:1px solid ${color}30;">${tipoLabel(ev.tipo)}</span></td>
+      <td style="color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${ev.jugador||'—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// CHAT IA
+// ═══════════════════════════════════════════════
+const chatHistory = [];
+let preguntasUsadas = 0;
+const PREGUNTAS_LIMITE = { entrenador: 10, analista: 20, elite: 30 };
+
+async function sendChat(){
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+
+  // Verificar límite del plan
+  const plan = window._perfilIA?.plan || 'entrenador';
+  const limite = PREGUNTAS_LIMITE[plan] || 10;
+  if(preguntasUsadas >= limite){
+    const planNombre = plan==='analista'?'Analista':plan==='elite'?'Élite':'Entrenador';
+    appendMsg('ia', `Has alcanzado el límite de ${limite} preguntas por partido del plan ${planNombre}. Actualiza tu plan para análisis ilimitado con IA.`, 'tactiq IA');
+    return;
+  }
+
+  input.value = '';
+  appendMsg('user', msg, 'Tú');
+  chatHistory.push({ role: 'user', content: msg });
+  preguntasUsadas++;
+
+  // Actualizar contador visible
+  _actualizarContadorIA();
+
+  const thinkingEl = appendMsg('ia', '⚽ Analizando el partido...', 'tactiq IA');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const res = await fetch('/.netlify/functions/chat', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ messages: chatHistory })
+    });
+    const data = await res.json();
+    if(res.status === 429){
+      thinkingEl.querySelector('.msg-text').textContent = 'Demasiadas peticiones. Espera un momento.';
+      preguntasUsadas--;
+      _actualizarContadorIA();
+      return;
+    }
+    if(res.status === 401 || res.status === 403){
+      thinkingEl.querySelector('.msg-text').textContent = data.error || 'No autorizado.';
+      preguntasUsadas--;
+      _actualizarContadorIA();
+      return;
+    }
+    const reply = data.content?.[0]?.text || 'No se pudo obtener respuesta.';
+    thinkingEl.querySelector('.msg-text').textContent = reply;
+    chatHistory.push({ role:'assistant', content: reply });
+  } catch(e) {
+    thinkingEl.querySelector('.msg-text').textContent = 'Error de conexión. Inténtalo de nuevo.';
+    preguntasUsadas--; // no contar si falla
+    _actualizarContadorIA();
+  }
+}
+
+function _actualizarContadorIA(){
+  const plan = window._perfilIA?.plan || 'entrenador';
+  const limite = PREGUNTAS_LIMITE[plan] || 10;
+  const restantes = limite - preguntasUsadas;
+  const el = document.getElementById('chat-counter');
+  if(!el) return;
+  el.textContent = `${preguntasUsadas}/${limite} preguntas`;
+  el.style.color = restantes === 0 ? '#f87171' : restantes <= 3 ? '#fcd34d' : '#5a7a66';
+}
+
+function generarIntroIA(){
+  const p = partido;
+  const evs = p.eventos.filter(e=>!e.obligatorio);
+  const nosotros = p.rol === 'Local' ? p.local : p.visitante;
+  const rival = p.rol === 'Local' ? p.visitante : p.local;
+
+  // ── Separar eventos propios y rivales ──
+  const TIPOS_CONTRA = ['gol-contra','tiro-contra','tiro-contra-fuera','pase-contra','corner-contra','falta-contra','ocasion-contra'];
+  const nuestros = evs.filter(e=>!TIPOS_CONTRA.includes(e.tipo)&&e.jugador!=='— Rival');
+  const rivales  = evs.filter(e=>TIPOS_CONTRA.includes(e.tipo)||e.jugador==='— Rival');
+
+  // ── Estadísticas básicas ──
+  const goles = nuestros.filter(e=>e.tipo==='gol').length;
+  const golesContra = rivales.filter(e=>e.tipo==='gol-contra').length;
+  const tirosPuerta = nuestros.filter(e=>e.tipo==='tiro-puerta').length;
+  const tirosFuera = nuestros.filter(e=>e.tipo==='tiro-fuera').length;
+  const totalTiros = tirosPuerta + tirosFuera;
+  const pasesPeligro = nuestros.filter(e=>e.tipo==='pase-peligro').length;
+  const pasesNormales = nuestros.filter(e=>e.tipo==='pase-bueno').length;
+  const recuperaciones = nuestros.filter(e=>e.tipo==='recuperacion').length;
+  const perdidas = nuestros.filter(e=>e.tipo==='perdida').length;
+  const faltasRecibidas = nuestros.filter(e=>e.tipo==='falta'||e.tipo==='falta-peligro').length;
+  const faltasPeligrosas = nuestros.filter(e=>e.tipo==='falta-peligro').length;
+  const faltasCometidas = rivales.filter(e=>e.tipo==='falta-contra').length;
+  const amarillas = nuestros.filter(e=>e.tipo==='amarilla').length;
+  const rojas = nuestros.filter(e=>e.tipo==='roja').length;
+  const corners = nuestros.filter(e=>e.tipo==='corner-favor').length;
+  const offsides = nuestros.filter(e=>e.tipo==='offside').length;
+  const ocasionesRival = rivales.filter(e=>e.tipo==='ocasion-contra'||e.tipo==='tiro-contra').length;
+  const tirosFueraRival = rivales.filter(e=>e.tipo==='tiro-contra-fuera').length;
+  const pasesRival = rivales.filter(e=>e.tipo==='pase-contra').length;
+  const cornersRival = rivales.filter(e=>e.tipo==='corner-contra').length;
+
+  // ── Eficiencia y ratios ──
+  const conversionGol = totalTiros>0 ? Math.round((goles/totalTiros)*100) : 0;
+  const precisionTiro = totalTiros>0 ? Math.round((tirosPuerta/totalTiros)*100) : 0;
+  const ratioPerdidaRecup = recuperaciones>0 ? (perdidas/recuperaciones).toFixed(1) : 'sin datos';
+  const faltasPorPerdida = perdidas>0 ? (faltasRecibidas/perdidas).toFixed(1) : 0;
+  const totalAccionesPropias = nuestros.length;
+
+  // ── Análisis de zonas (campo x:0-100 derecha=ataque, y:0-100) ──
+  const conCoords = nuestros.filter(e=>e.x&&e.y&&e.x!=='—'&&e.y!=='—');
+  const toX = e => parseFloat(e.x);
+  const toY = e => parseFloat(e.y);
+
+  // Tercios
+  const t1Def = conCoords.filter(e=>toX(e)>66).length;
+  const t2Med = conCoords.filter(e=>toX(e)>=33&&toX(e)<=66).length;
+  const t3Ata = conCoords.filter(e=>toX(e)<33).length;
+
+  // Carriles
+  const cIzq = conCoords.filter(e=>toY(e)<33).length;
+  const cCen = conCoords.filter(e=>toY(e)>=33&&toY(e)<=66).length;
+  const cDer = conCoords.filter(e=>toY(e)>66).length;
+  const carrilDom = cIzq>cCen&&cIzq>cDer?'izquierdo':cDer>cIzq&&cDer>cCen?'derecho':'central';
+
+  // Pérdidas por zona
+  const perdidasDef = nuestros.filter(e=>e.tipo==='perdida'&&e.x&&toX(e)>66).length;
+  const perdidasMed = nuestros.filter(e=>e.tipo==='perdida'&&e.x&&toX(e)>=33&&toX(e)<=66).length;
+  const perdidasAta = nuestros.filter(e=>e.tipo==='perdida'&&e.x&&toX(e)<33).length;
+
+  // Tiros desde dónde
+  const tirosCercanos = nuestros.filter(e=>(e.tipo==='tiro-puerta'||e.tipo==='tiro-fuera')&&e.x&&toX(e)<20).length;
+  const tirosLejanos = nuestros.filter(e=>(e.tipo==='tiro-puerta'||e.tipo==='tiro-fuera')&&e.x&&toX(e)>=20&&toX(e)<40).length;
+  const tirosCarrilIzq = nuestros.filter(e=>(e.tipo==='tiro-puerta'||e.tipo==='tiro-fuera')&&e.y&&toY(e)<33).length;
+  const tirosCarrilCen = nuestros.filter(e=>(e.tipo==='tiro-puerta'||e.tipo==='tiro-fuera')&&e.y&&toY(e)>=33&&toY(e)<=66).length;
+  const tirosCarrilDer = nuestros.filter(e=>(e.tipo==='tiro-puerta'||e.tipo==='tiro-fuera')&&e.y&&toY(e)>66).length;
+
+  // Recuperaciones por zona — pressing alto vs bajo
+  const recupAlta = nuestros.filter(e=>e.tipo==='recuperacion'&&e.x&&toX(e)<33).length;
+  const recupMedia = nuestros.filter(e=>e.tipo==='recuperacion'&&e.x&&toX(e)>=33&&toX(e)<=66).length;
+  const recupBaja  = nuestros.filter(e=>e.tipo==='recuperacion'&&e.x&&toX(e)>66).length;
+  const estiloPresion = recupAlta>recupBaja?'pressing alto (recupera en campo rival)':recupBaja>recupAlta?'bloque bajo (recupera en campo propio)':'pressing medio';
+
+  // Zona de peligro rival
+  const peligroRivalIzq = rivales.filter(e=>e.y&&toY(e)<33).length;
+  const peligroRivalCen = rivales.filter(e=>e.y&&toY(e)>=33&&toY(e)<=66).length;
+  const peligroRivalDer = rivales.filter(e=>e.y&&toY(e)>66).length;
+  const zonaPeligroRival = peligroRivalIzq>peligroRivalCen&&peligroRivalIzq>peligroRivalDer?'por nuestra derecha':peligroRivalDer>peligroRivalIzq&&peligroRivalDer>peligroRivalCen?'por nuestra izquierda':'por el centro';
+
+  // ── Análisis temporal ──
+  const tramos = [0,0,0,0,0,0];
+  nuestros.forEach(e=>{ const m=e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0); tramos[Math.min(Math.floor(m/15),5)]++; });
+  const tramosRival = [0,0,0,0,0,0];
+  rivales.forEach(e=>{ const m=e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0); tramosRival[Math.min(Math.floor(m/15),5)]++; });
+  const tramoLabels = ['0-15\'','15-30\'','30-45\'','45-60\'','60-75\'','75-90\''];
+  const tramoMaxNuestro = tramos.indexOf(Math.max(...tramos));
+  const tramoMaxRival = tramosRival.indexOf(Math.max(...tramosRival));
+
+  // Minutos de los goles
+  const minutosGoles = nuestros.filter(e=>e.tipo==='gol').map(e=>e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0));
+  const minutosGolesContra = rivales.filter(e=>e.tipo==='gol-contra').map(e=>e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0));
+
+  // Primera/segunda parte
+  const primeraParteNuestros = nuestros.filter(e=>{const m=e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0);return m<=45;}).length;
+  const segundaParteNuestros = nuestros.length - primeraParteNuestros;
+  const tendencia = segundaParteNuestros > primeraParteNuestros*1.2 ? 'mejora en segunda parte' : primeraParteNuestros > segundaParteNuestros*1.2 ? 'baja el ritmo en segunda parte' : 'intensidad constante durante el partido';
+
+  // ── Análisis por jugador ──
+  const jugStats = {};
+  nuestros.forEach(e=>{
+    if(!e.jugador||e.jugador==='—') return;
+    if(!jugStats[e.jugador]) jugStats[e.jugador]={total:0,goles:0,tiros:0,pases:0,recup:0,perdidas:0,faltas:0,amarillas:0,rojas:0};
+    const s = jugStats[e.jugador];
+    s.total++;
+    if(e.tipo==='gol') s.goles++;
+    if(e.tipo==='tiro-puerta'||e.tipo==='tiro-fuera') s.tiros++;
+    if(e.tipo==='pase-peligro'||e.tipo==='pase-bueno') s.pases++;
+    if(e.tipo==='recuperacion') s.recup++;
+    if(e.tipo==='perdida') s.perdidas++;
+    if(e.tipo==='falta'||e.tipo==='falta-peligro') s.faltas++;
+    if(e.tipo==='amarilla') s.amarillas++;
+    if(e.tipo==='roja') s.rojas++;
+  });
+  const jugadoresList = Object.entries(jugStats).sort((a,b)=>b[1].total-a[1].total);
+  const topGoleador = jugadoresList.filter(([,s])=>s.goles>0).sort((a,b)=>b[1].goles-a[1].goles)[0];
+  const topCreador = jugadoresList.sort((a,b)=>b[1].pases-a[1].pases)[0];
+  const topRecuperador = jugadoresList.sort((a,b)=>b[1].recup-a[1].recup)[0];
+  const masPerdidasJug = jugadoresList.sort((a,b)=>b[1].perdidas-a[1].perdidas)[0];
+  const masActivoJug = jugadoresList.sort((a,b)=>b[1].total-a[1].total)[0];
+  const jugadoresAmarillaRoja = jugadoresList.filter(([,s])=>s.amarillas>0||s.rojas>0).map(([n,s])=>`${n}(${s.amarillas}🟨${s.rojas>0?s.rojas+'🟥':''})`).join(', ');
+
+  // Suplentes — jugadores que aparecen en la segunda parte sin estar en la primera
+  const jugPrimera = new Set(nuestros.filter(e=>{const m=e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0);return m<=45&&e.jugador&&e.jugador!=='—';}).map(e=>e.jugador));
+  const jugSegunda = new Set(nuestros.filter(e=>{const m=e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0);return m>45&&e.jugador&&e.jugador!=='—';}).map(e=>e.jugador));
+  const posiblesSuplentes = [...jugSegunda].filter(j=>!jugPrimera.has(j));
+  const aportacionSuplentes = posiblesSuplentes.map(j=>{
+    const s = jugStats[j];
+    if(!s) return j;
+    return `${j}: ${s.total} acciones${s.goles>0?', '+s.goles+' gol':''}${s.tiros>0?', '+s.tiros+' tiro':''}${s.pases>0?', '+s.pases+' pase peligroso':''}`;
+  }).join(' | ');
+
+  // ── Patrones secuenciales ──
+  let secuenciasGol = [];
+  const evsSorted = [...nuestros].sort((a,b)=>(a.sec||0)-(b.sec||0));
+  evsSorted.forEach((e,i)=>{
+    if(e.tipo==='gol'&&i>0){
+      const prev = evsSorted[i-1];
+      const prev2 = i>1?evsSorted[i-2]:null;
+      const chain = [prev2?prev2.tipo:null, prev.tipo, 'gol'].filter(Boolean).join('→');
+      secuenciasGol.push(`Min ${e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0)}': ${chain}`);
+    }
+  });
+
+  // ── Resumen intro ──
+  const resStr = goles>golesContra?`Victoria ${goles}–${golesContra}`:goles<golesContra?`Derrota ${goles}–${golesContra}`:`Empate ${goles}–${golesContra}`;
+  const intro = `${resStr} frente a ${rival}. ${totalTiros} tiros (${conversionGol}% conversión), ${pasesPeligro} pases peligrosos, ${recuperaciones} recuperaciones. Mayor intensidad en el tramo ${tramoLabels[tramoMaxNuestro]}. ¿Qué quieres analizar?`;
+  document.getElementById('chat-intro').textContent = intro;
+
+  const systemMsg = `Eres un analista táctico de fútbol de élite con experiencia en todos los niveles — desde fútbol base hasta profesional. Trabajas con tactiqfutbol.es ayudando a entrenadores a extraer conclusiones tácticas y de rendimiento accionables.
+
+Tu conocimiento abarca: sistemas tácticos (4-3-3, 4-4-2, 5-3-2, 3-5-2 y variantes), pressing alto/medio/bajo, gegenpressing, construcción en corto y largo, transiciones ofensivas y defensivas, líneas de pase, espacios entre líneas, coberturas y permutas defensivas, duelos 1vs1, desborde por bandas vs juego interior, estrategia a balón parado, gestión del marcador, disciplina táctica y ritmo de partido.
+
+═══ PARTIDO ═══
+${nosotros} (${p.rol}) ${goles}–${golesContra} ${rival}
+Jornada ${p.jornada||'—'} | ${p.fecha||'—'} | Formación: ${p.formacion||'no registrada'}
+
+═══ ATAQUE ═══
+Goles: ${goles} | Tiros a puerta: ${tirosPuerta} | Tiros fuera: ${tirosFuera} | Total tiros: ${totalTiros}
+Conversión (goles/tiros): ${conversionGol}% | Precisión (a puerta/total): ${precisionTiro}%
+Tiros por zona: cerca del área ${tirosCercanos}, larga distancia ${tirosLejanos}
+Tiros por carril: izquierdo ${tirosCarrilIzq}, central ${tirosCarrilCen}, derecho ${tirosCarrilDer}
+Pases peligrosos: ${pasesPeligro} | Pases normales: ${pasesNormales} | Corners: ${corners} | Fueras de juego: ${offsides}
+Secuencias previas a gol: ${secuenciasGol.length>0?secuenciasGol.join(' / '):'sin goles registrados'}
+Minutos de gol propios: ${minutosGoles.length>0?minutosGoles.join(', ')+'\'':'—'}
+
+═══ DEFENSA ═══
+Goles encajados: ${golesContra} en minutos: ${minutosGolesContra.length>0?minutosGolesContra.join(', ')+'\'':'—'}
+Ocasiones del rival: ${ocasionesRival} | Tiros fuera del rival: ${tirosFueraRival}
+Pases peligrosos del rival: ${pasesRival} | Corners del rival: ${cornersRival}
+El rival genera peligro principalmente ${zonaPeligroRival}
+Recuperaciones: ${recuperaciones} (pressing alto: ${recupAlta}, medio: ${recupMedia}, bajo: ${recupBaja})
+Estilo defensivo detectado: ${estiloPresion}
+Pérdidas: ${perdidas} (campo propio: ${perdidasDef}, zona media: ${perdidasMed}, campo rival: ${perdidasAta})
+Ratio pérdida/recuperación: ${ratioPerdidaRecup} (ideal <1)
+
+═══ DISCIPLINA ═══
+Faltas recibidas: ${faltasRecibidas} (${faltasPeligrosas} peligrosas) | Faltas cometidas: ${faltasCometidas}
+Tarjetas: ${amarillas}🟨 ${rojas}🟥 | Jugadores con tarjeta: ${jugadoresAmarillaRoja||'ninguno'}
+
+═══ DOMINIO TERRITORIAL ═══
+Carril dominante: ${carrilDom} (izq ${cIzq}, centro ${cCen}, der ${cDer} acciones)
+Tercio defensivo: ${t1Def} acc | Tercio medio: ${t2Med} acc | Tercio atacante: ${t3Ata} acc
+
+═══ TEMPORAL ═══
+Nuestras acciones por tramo: ${tramos.map((n,i)=>tramoLabels[i]+':'+n).join(' | ')}
+Acciones rival por tramo:    ${tramosRival.map((n,i)=>tramoLabels[i]+':'+n).join(' | ')}
+Mayor actividad propia: ${tramoLabels[tramoMaxNuestro]} | Mayor presión rival: ${tramoLabels[tramoMaxRival]}
+Tendencia: ${tendencia}
+1ª parte: ${primeraParteNuestros} acciones propias | 2ª parte: ${segundaParteNuestros}
+
+═══ JUGADORES ═══
+Más activo: ${masActivoJug?masActivoJug[0]+' ('+masActivoJug[1].total+' acc)':'—'}
+Goleador: ${topGoleador?topGoleador[0]+' ('+topGoleador[1].goles+' goles)':'nadie'}
+Creador (pases peligrosos): ${topCreador&&topCreador[1].pases>0?topCreador[0]+' ('+topCreador[1].pases+')':'nadie'}
+Más recuperaciones: ${topRecuperador&&topRecuperador[1].recup>0?topRecuperador[0]+' ('+topRecuperador[1].recup+')':'nadie'}
+Más pérdidas: ${masPerdidasJug&&masPerdidasJug[1].perdidas>0?masPerdidasJug[0]+' ('+masPerdidasJug[1].perdidas+')':'nadie'}
+Posibles suplentes con impacto: ${aportacionSuplentes||'no detectados'}
+
+═══ TODOS LOS EVENTOS ═══
+${JSON.stringify(evs.map(e=>({min:e.sec!=null?Math.floor(e.sec/60):(parseInt(e.min)||0),tipo:e.tipo,jugador:e.jugador,x:e.x,y:e.y})))}
+
+═══ INSTRUCCIONES ═══
+- Responde SIEMPRE en español
+- Máximo 5 frases — densas en contenido táctico, no en palabras
+- Usa los datos reales del partido, nunca generalices ni inventes
+- Adapta el lenguaje: si es fútbol base usa términos más simples; si los datos muestran sofisticación táctica, profundiza
+- Detecta patrones concretos: zona de pérdidas, minuto de vulnerabilidad, jugadores clave
+- Termina siempre con UNA recomendación de entrenamiento concreta y aplicable esta semana
+- Si los datos son insuficientes para una conclusión sólida, dilo y sugiere qué etiquetar en el próximo partido`;
+
+  chatHistory.push({ role: 'user', content: systemMsg });
+  chatHistory.push({ role: 'assistant', content: intro });
+}
+
+async function sendChat(){
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+  appendMsg('user', msg, 'Tú');
+  chatHistory.push({ role: 'user', content: msg });
+  const thinkingEl = appendMsg('ia', '⚽ Analizando el partido...', 'tactiq IA');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const res = await fetch('/.netlify/functions/chat', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ messages: chatHistory })
+    });
+    const data = await res.json();
+    if(res.status === 429){
+      thinkingEl.querySelector('.msg-text').textContent = 'Demasiadas peticiones. Espera un momento.';
+      return;
+    }
+    if(res.status === 401 || res.status === 403){
+      thinkingEl.querySelector('.msg-text').textContent = data.error || 'No autorizado.';
+      return;
+    }
+    const reply = data.content?.[0]?.text || 'No se pudo obtener respuesta.';
+    thinkingEl.querySelector('.msg-text').textContent = reply;
+    chatHistory.push({ role:'assistant', content: reply });
+  } catch(e) {
+    thinkingEl.querySelector('.msg-text').textContent = 'Error de conexión. Inténtalo de nuevo.';
+  }
+}
+
+function appendMsg(type, text, name){
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = type === 'ia' ? 'msg-ia' : 'msg-user';
+  const nameColor = type === 'ia' ? 'var(--green)' : 'var(--dim)';
+  div.innerHTML = `<div class="msg-name" style="color:${nameColor};">${name}</div><div class="msg-text" style="color:var(--muted);">${text}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function askSugg(el){
+  document.getElementById('chat-input').value = el.textContent;
+  sendChat();
+}
+
+// ═══════════════════════════════════════════════
+// ACCIONES
+// ═══════════════════════════════════════════════
+async function nuevoPartido(){
+  // Consultar partidos restantes del mes
+  let restantes = '...';
+  let limite = 3;
+  let diasReset = '';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      const { data: perfil } = await sb.from('perfiles').select('plan,created_at').eq('id',session.user.id).single();
+      const plan = perfil?.plan || 'entrenador';
+      const limites = { entrenador:3, analista:5, elite:10 };
+      limite = limites[plan] || 3;
+
+      // Ciclo de 30 días desde el registro
+      const registro = new Date(perfil?.created_at || Date.now());
+      const ahora = new Date();
+      const diasDesdeRegistro = Math.floor((ahora - registro) / (1000*60*60*24));
+      const ciclosCompletos = Math.floor(diasDesdeRegistro / 30);
+      const inicioCicloActual = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
+      const finCicloActual = new Date(inicioCicloActual.getTime() + 30*24*60*60*1000);
+      const diasParaReset = Math.ceil((finCicloActual - ahora) / (1000*60*60*24));
+
+      // Contar partidos en el ciclo actual
+      const { count } = await sb.from('partidos')
+        .select('*',{count:'exact',head:true})
+        .eq('user_id', session.user.id)
+        .gte('created_at', inicioCicloActual.toISOString());
+
+      restantes = Math.max(0, limite - (count||0));
+      if(diasParaReset > 0) diasReset = `<br><span style="font-size:10px;color:#a8c4b0;margin-top:4px;display:block;">El contador se reinicia en ${diasParaReset} día${diasParaReset===1?'':'s'}.</span>`;
+    }
+  } catch(e){ restantes = '?'; }
+
+  // Modal de confirmación
+  const msg = restantes === 0
+    ? `Has alcanzado el límite de <strong>${limite} partidos</strong> este mes.${diasReset}<br><br>Actualiza tu plan para analizar más partidos.`
+    : `¿Empezar un nuevo análisis?<br><br>En tu plan te quedan <strong>${restantes} partido${restantes===1?'':'s'}</strong> disponible${restantes===1?'':'s'} este mes.${diasReset}`;
+
+  if(restantes === 0){
+    // Sin partidos → solo info, sin botón de confirmar
+    const modal = document.createElement('div');
+    modal.id = 'modal-limite';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `<div style="background:#131a16;border:1px solid #1e2d24;border-radius:12px;padding:28px 32px;max-width:360px;text-align:center;font-family:Inter,sans-serif;">
+      <div style="font-size:24px;margin-bottom:12px;">⚡</div>
+      <div style="font-size:15px;font-weight:700;color:#c8ddd0;margin-bottom:10px;">Límite alcanzado</div>
+      <div style="font-size:12px;color:#a8c4b0;line-height:1.6;margin-bottom:20px;">${msg}</div>
+      <button onclick="document.getElementById('modal-limite').remove()" style="padding:9px 20px;background:#1D9E75;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;font-size:12px;">Entendido</button>
+    </div>`;
+    document.body.appendChild(modal);
+    return;
+  }
+
+  // Con partidos disponibles → confirmar
+  const modal = document.createElement('div');
+  modal.id = 'modal-nuevo-partido';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `<div style="background:#131a16;border:1px solid #1e2d24;border-radius:12px;padding:28px 32px;max-width:360px;text-align:center;font-family:Inter,sans-serif;">
+    <div style="font-size:24px;margin-bottom:12px;">📋</div>
+    <div style="font-size:15px;font-weight:700;color:#c8ddd0;margin-bottom:10px;">Nuevo partido</div>
+    <div style="font-size:12px;color:#a8c4b0;line-height:1.6;margin-bottom:20px;">${msg}</div>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button onclick="document.getElementById('modal-nuevo-partido').remove()" style="padding:9px 20px;background:rgba(255,255,255,0.04);border:1px solid #1e2d24;border-radius:8px;color:#a8c4b0;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;font-size:12px;">Cancelar</button>
+      <button onclick="localStorage.removeItem('tactiq_ultimo_partido');window.location.href='app.html'" style="padding:9px 20px;background:#1D9E75;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;font-size:12px;">Sí, empezar →</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+// ═══════════════════════════════════════════════
+// MOCK DATA (fallback sin datos reales)
+// ═══════════════════════════════════════════════
+function getMockPartido(){
+  const jugs = ['3. Sánchez','4. Rodríguez','5. López','6. Díaz','7. García','8. Fernández','9. Martínez','11. Pérez'];
+  const tipos_favor = ['pase-bueno','pase-bueno','pase-peligro','tiro-puerta','tiro-fuera','recuperacion','falta','perdida','corner-favor','offside'];
+  const tipos_contra = ['pase-contra','tiro-contra','gol-contra','falta-contra','ocasion-contra','tiro-contra-fuera'];
+  const rnd = (a,b) => Math.round(a + Math.random()*(b-a));
+  const evs = [{id:1,min:'0',tipo:'inicio-partido',jugador:'—',x:'—',y:'—',sec:0,obligatorio:true}];
+  evs.push({id:2,min:'45',tipo:'fin-primera',jugador:'—',x:'—',y:'—',sec:2700,obligatorio:true});
+  evs.push({id:3,min:'45',tipo:'inicio-segunda',jugador:'—',x:'—',y:'—',sec:2701,obligatorio:true});
+  evs.push({id:4,min:'90',tipo:'fin-partido',jugador:'—',x:'—',y:'—',sec:5400,obligatorio:true});
+
+  let id = 5;
+  // Generar 90 eventos con segundos distribuidos uniformemente entre 1-5399
+  const secsUsados = [];
+  for(let i=0;i<90;i++) secsUsados.push(rnd(60, 5380));
+  secsUsados.sort((a,b)=>a-b);
+
+  secsUsados.forEach(sec => {
+    const min = Math.floor(sec/60);
+    const esContra = Math.random() < 0.25;
+    const tipo = esContra ? tipos_contra[rnd(0,tipos_contra.length-1)] : tipos_favor[rnd(0,tipos_favor.length-1)];
+    const jugador = esContra ? '— Rival' : jugs[rnd(0,jugs.length-1)];
+    let x,y;
+    if(esContra){ x=rnd(55,95); y=rnd(10,90); }
+    else if(tipo==='pase-bueno'){ x=rnd(20,65); y=rnd(15,85); }
+    else if(tipo==='pase-peligro'){ x=rnd(55,85); y=rnd(10,90); }
+    else if(tipo==='tiro-puerta'||tipo==='tiro-fuera'){ x=rnd(5,25); y=rnd(30,70); }
+    else if(tipo==='recuperacion'){ x=rnd(30,70); y=rnd(20,80); }
+    else { x=rnd(20,80); y=rnd(15,85); }
+    const minStr = String(min).padStart(2,'0')+':00';
+    evs.push({id:id++,min:minStr,tipo,jugador,x:String(x),y:String(y),sec});
+  });
+
+  // Forzar eventos clave en minutos fijos
+  evs.push({id:id++,min:'23:00',tipo:'gol',jugador:'9. Martínez',x:'8',y:'55',sec:1380});
+  evs.push({id:id++,min:'67:00',tipo:'gol',jugador:'11. Pérez',x:'10',y:'70',sec:4020});
+  evs.push({id:id++,min:'44:00',tipo:'gol-contra',jugador:'— Rival',x:'92',y:'60',sec:2640});
+  evs.push({id:id++,min:'52:00',tipo:'amarilla',jugador:'4. Rodríguez',x:'55',y:'45',sec:3120});
+  evs.push({id:id++,min:'78:00',tipo:'amarilla',jugador:'7. García',x:'60',y:'30',sec:4680});
+  evs.push({id:id++,min:'89:00',tipo:'roja',jugador:'5. López',x:'50',y:'50',sec:5340});
+  evs.push({id:id++,min:'90',tipo:'fin-partido',jugador:'—',x:'—',y:'—',sec:5400,obligatorio:true});
+  evs.sort((a,b)=>a.sec-b.sec);
+  return {
+    local:'SD Huesca B', visitante:'Ejea CF',
+    jornada:'22', fecha:'2026-03-15', rol:'Local',
+    scoreLocal:2, scoreVisitante:1,
+    eventos: evs
+  };
+}
+// ═══════════════════════════════════════════════
+// COMPARTIR EN REDES
+// ═══════════════════════════════════════════════
+function compartirPartido(){
+  const p = partido;
+  const nosotros = p.rol === 'Local' ? p.local : p.visitante;
+  const rival = p.rol === 'Local' ? p.visitante : p.local;
+  const evs = p.eventos.filter(e=>!e.obligatorio);
+  const goles = evs.filter(e=>e.tipo==='gol').length;
+  const golesContra = evs.filter(e=>e.tipo==='gol-contra').length;
+  const resTexto = goles > golesContra ? '🏆 Victoria' : goles < golesContra ? '💪 Derrota' : '🤝 Empate';
+  const resColor = goles > golesContra ? '#1D9E75' : goles < golesContra ? '#f87171' : '#fcd34d';
+  const texto = `${resTexto} ${goles}-${golesContra} vs ${rival}\n\n⚽ ${evs.length} acciones registradas\n📊 Análisis táctico con IA\n\ntactiqfutbol.es — fútbol inteligente`;
+
+  // Clonar SVGs para la tarjeta
+  const svgAcc = document.getElementById('campo-acciones')?.outerHTML || '';
+  const svgCal = document.getElementById('campo-calor')?.outerHTML || '';
+
+  // Crear tarjeta para compartir (proporción Story 9:16)
+  const tarjeta = document.createElement('div');
+  tarjeta.id = 'share-card';
+  tarjeta.style.cssText = `
+    position:fixed;left:-9999px;top:0;
+    width:400px;background:#0e1210;
+    font-family:Inter,sans-serif;padding:28px 24px 20px;
+    display:flex;flex-direction:column;gap:16px;
+  `;
+  tarjeta.innerHTML = `
+    <!-- header tactiq -->
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="width:32px;height:32px;background:#1D9E75;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.2" fill="white"/><circle cx="9" cy="2.5" r="1.4" fill="white"/><circle cx="9" cy="15.5" r="1.4" fill="white"/><circle cx="2.5" cy="9" r="1.4" fill="white"/><circle cx="15.5" cy="9" r="1.4" fill="white"/><line x1="9" y1="9" x2="9" y2="2.5" stroke="white" stroke-width="0.8"/><line x1="9" y1="9" x2="9" y2="15.5" stroke="white" stroke-width="0.8"/><line x1="9" y1="9" x2="2.5" y2="9" stroke="white" stroke-width="0.8"/><line x1="9" y1="9" x2="15.5" y2="9" stroke="white" stroke-width="0.8"/></svg>
+      </div>
+      <span style="font-size:20px;font-weight:500;color:#fff;letter-spacing:-0.5px;">tactiqfutbol<span style="font-size:16px;font-weight:400;color:#5DCAA5;letter-spacing:0;">.es</span></span>
+      
+    </div>
+    <!-- resultado -->
+    <div style="background:#131a16;border:1px solid #1e2d24;border-radius:10px;padding:16px;position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+        <span style="font-size:72px;font-weight:800;color:rgba(29,158,117,0.05);letter-spacing:-3px;">tactiq</span>
+      </div>
+      <div style="font-size:9px;color:#a8c4b0;margin-bottom:4px;">${p.jornada?'J'+p.jornada+' · ':''}${p.fecha||''} · ${p.formacion||''}</div>
+      <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;margin-bottom:8px;">${nosotros} <span style="color:${resColor};">${goles} — ${golesContra}</span> ${rival}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:9px;background:rgba(29,158,117,0.12);color:#1D9E75;border:1px solid rgba(29,158,117,0.2);padding:2px 8px;border-radius:10px;">${resTexto}</span>
+      </div>
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;">
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#1D9E75;">${goles}</div><div style="font-size:7px;color:#a8c4b0;">GOLES</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#c8ddd0;">${evs.filter(e=>e.tipo==='tiro-puerta').length}</div><div style="font-size:7px;color:#a8c4b0;">TIROS</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#5DCAA5;">${evs.filter(e=>e.tipo==='recuperacion').length}</div><div style="font-size:7px;color:#a8c4b0;">RECUP.</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#60a5fa;">${evs.filter(e=>e.tipo==='pase-peligro').length}</div><div style="font-size:7px;color:#a8c4b0;">PASES P.</div></div>
+      </div>
+    </div>
+    <!-- campogramas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:#080d0a;border-radius:6px;padding:5px;">
+        <div style="font-size:7px;color:#a8c4b0;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px;">Acciones</div>
+        ${svgAcc.replace('id="campo-acciones"','').replace('style="width:100%;flex:1;min-height:0;display:block;border-radius:2px;"','style="width:100%;height:auto;display:block;"')}
+      </div>
+      <div style="background:#080d0a;border-radius:6px;padding:5px;">
+        <div style="font-size:7px;color:#a8c4b0;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px;">Calor</div>
+        ${svgCal.replace('id="campo-calor"','').replace('style="width:100%;flex:1;min-height:0;display:block;border-radius:2px;"','style="width:100%;height:auto;display:block;"')}
+      </div>
+    </div>
+    <!-- footer con texto y link DENTRO de la imagen -->
+    <div style="text-align:center;background:#131a16;border-radius:8px;padding:12px 16px;border:1px solid rgba(29,158,117,0.2);">
+      <div style="font-size:13px;font-weight:700;color:#c8ddd0;margin-bottom:4px;">${resTexto} ${goles}-${golesContra} vs ${rival}</div>
+      <div style="font-size:10px;color:#a8c4b0;margin-bottom:10px;">${evs.length} acciones registradas · ${p.formacion||''}</div>
+      <!-- badges accesibilidad -->
+      <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+        <span style="font-size:9px;background:rgba(29,158,117,0.1);border:1px solid rgba(29,158,117,0.25);color:#5DCAA5;padding:3px 8px;border-radius:20px;">🌐 Solo necesitas un navegador</span>
+        <span style="font-size:9px;background:rgba(29,158,117,0.1);border:1px solid rgba(29,158,117,0.25);color:#5DCAA5;padding:3px 8px;border-radius:20px;">⚽ Para cualquier entrenador</span>
+        <span style="font-size:9px;background:rgba(29,158,117,0.1);border:1px solid rgba(29,158,117,0.25);color:#5DCAA5;padding:3px 8px;border-radius:20px;">🚀 Sin instalación · Gratis para empezar</span>
+      </div>
+      <div style="display:inline-block;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.3);border-radius:20px;padding:4px 16px;">
+        <span style="font-size:11px;font-weight:700;color:#1D9E75;letter-spacing:0.5px;">tactiq<span style="font-size:13px;font-weight:400;color:#5DCAA5;letter-spacing:0;">futbol.es</span></span>
+        <span style="font-size:10px;color:#a8c4b0;"> · @tactiqfutbol</span>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(tarjeta);
+
+  // Modal con preview y botones de redes
+  const modal = document.createElement('div');
+  modal.id = 'modal-compartir';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#131a16;border:1px solid #1e2d24;border-radius:14px;padding:20px 24px;max-width:440px;width:95%;font-family:Inter,sans-serif;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:700;color:#c8ddd0;">Compartir en redes</div>
+        <button onclick="document.getElementById('modal-compartir').remove();document.getElementById('share-card')?.remove();" style="background:none;border:none;color:#a8c4b0;font-size:18px;cursor:pointer;">✕</button>
+      </div>
+
+      <!-- paso 1: generar imagen -->
+      <div id="step-generar" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:10px;color:#a8c4b0;line-height:1.5;background:rgba(29,158,117,0.06);border:1px solid rgba(29,158,117,0.15);border-radius:8px;padding:10px 12px;">
+          📸 Se generará una imagen con el análisis completo — resultado, KPIs y campogramas — lista para compartir en cualquier red.
+        </div>
+        <button onclick="generarYCompartir()" id="btn-generar" style="width:100%;padding:12px;background:linear-gradient(135deg,#1D9E75,#0F6E56);border:none;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">🖼 Generar imagen</button>
+      </div>
+
+      <!-- paso 2: redes (oculto hasta generar) -->
+      <div id="step-redes" style="display:none;flex-direction:column;gap:10px;">
+        <!-- preview -->
+        <img id="share-img" style="width:100%;border-radius:8px;border:1px solid #1e2d24;" />
+
+        <!-- redes virales primero -->
+        <div style="font-size:9px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;">Compartir en</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+          <!-- Instagram -->
+          <button onclick="compartirRed('instagram')" style="padding:10px 6px;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);border:none;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="white" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg>
+            Instagram
+          </button>
+          <!-- TikTok -->
+          <button onclick="compartirRed('tiktok')" style="padding:10px 6px;background:#000;border:1px solid #333;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.32 6.32 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
+            TikTok
+          </button>
+          <!-- WhatsApp -->
+          <button onclick="compartirRed('whatsapp')" style="padding:10px 6px;background:#25D366;border:none;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            WhatsApp
+          </button>
+          <!-- Email -->
+          <button onclick="compartirRed('email')" style="padding:10px 6px;background:#4285F4;border:none;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+            Email
+          </button>
+        </div>
+
+        <!-- otras redes -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+          <!-- LinkedIn -->
+          <button onclick="compartirRed('linkedin')" style="padding:8px 6px;background:#0077B5;border:none;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+            LinkedIn
+          </button>
+          <!-- Twitter/X -->
+          <button onclick="compartirRed('twitter')" style="padding:8px 6px;background:#000;border:1px solid #333;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.738-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            X / Twitter
+          </button>
+          <!-- Facebook -->
+          <button onclick="compartirRed('facebook')" style="padding:8px 6px;background:#1877F2;border:none;border-radius:8px;color:#fff;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+            Facebook
+          </button>
+          <!-- Descargar -->
+          <button onclick="descargarImagen()" style="padding:8px 6px;background:rgba(255,255,255,0.06);border:1px solid #1e2d24;border-radius:8px;color:#a8c4b0;font-family:Inter,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target===modal){ modal.remove(); document.getElementById('share-card')?.remove(); }});
+}
+
+function copiarTexto(){
+  const txt = document.getElementById('share-text')?.value;
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById('btn-copiar');
+    if(btn){ btn.textContent = '✓ Copiado'; setTimeout(()=>{ btn.textContent='📋 Copiar texto'; }, 2000); }
+  });
+}
+
+async function generarYCompartir(){
+  const btn = document.getElementById('btn-generar');
+  if(btn){ btn.textContent = '⏳ Generando...'; btn.disabled = true; }
+
+  if(!window.html2canvas){
+    await new Promise((res,rej)=>{
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const card = document.getElementById('share-card');
+  if(!card){ if(btn){btn.textContent='🖼 Generar imagen';btn.disabled=false;} return; }
+
+  try {
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#0e1210', scale: 2, useCORS: true, allowTaint: true
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    window._shareImgDataUrl = dataUrl;
+
+    // Mostrar preview y redes
+    const img = document.getElementById('share-img');
+    if(img) img.src = dataUrl;
+    document.getElementById('step-generar').style.display = 'none';
+    const stepRedes = document.getElementById('step-redes');
+    if(stepRedes) stepRedes.style.display = 'flex';
+  } catch(e){ console.error('html2canvas error:', e); }
+  if(btn){ btn.textContent='🖼 Regenerar'; btn.disabled=false; }
+}
+
+async function compartirRed(red){
+  const url = window._shareImgDataUrl;
+  const p = partido;
+  const nosotros = p.rol === 'Local' ? p.local : p.visitante;
+  const rival = p.rol === 'Local' ? p.visitante : p.local;
+  const evs = p.eventos.filter(e=>!e.obligatorio);
+  const goles = evs.filter(e=>e.tipo==='gol').length;
+  const golesContra = evs.filter(e=>e.tipo==='gol-contra').length;
+  const resultado = goles > golesContra ? '🏆 Victoria' : goles < golesContra ? '💪 Derrota' : '🤝 Empate';
+  const textoBase = `${resultado} ${goles}-${golesContra} vs ${rival}\n⚽ ${evs.length} acciones analizadas con IA\n📊 tactiqfutbol.es — análisis táctico de fútbol`;
+  const urlApp = 'https://tactiqfutbol.es';
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // Intentar compartir imagen con Web Share API nativa (funciona en móvil con Instagram, WhatsApp, etc.)
+  if(url && isMobile && navigator.canShare){
+    try {
+      const blob = await (await fetch(url)).blob();
+      const file = new File([blob], 'tactiq-analisis.png', { type:'image/png' });
+      if(navigator.canShare({ files:[file] })){
+        await navigator.share({ files:[file], text:textoBase });
+        return;
+      }
+    } catch(e){ console.log('Share API failed:', e); }
+  }
+
+  // Redes que tienen API web (solo texto/URL, sin imagen)
+  if(red === 'twitter'){
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textoBase)}&url=${encodeURIComponent(urlApp)}`, '_blank');
+    if(url) _mostrarAvisoDescarga('X / Twitter');
+    return;
+  }
+  if(red === 'facebook'){
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(urlApp)}&quote=${encodeURIComponent(textoBase)}`, '_blank');
+    if(url) _mostrarAvisoDescarga('Facebook');
+    return;
+  }
+  if(red === 'linkedin'){
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(urlApp)}&summary=${encodeURIComponent(textoBase)}`, '_blank');
+    if(url) _mostrarAvisoDescarga('LinkedIn');
+    return;
+  }
+  if(red === 'email'){
+    const asunto = `Análisis táctico: ${nosotros} ${goles}-${golesContra} ${rival}`;
+    const cuerpo = `${textoBase}\n\nVer análisis completo: ${urlApp}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    if(url) descargarImagen();
+    return;
+  }
+
+  // WhatsApp — en móvil ya funcionó con Web Share API arriba. En desktop abre web + descarga imagen
+  if(red === 'whatsapp'){
+    if(url) descargarImagen();
+    setTimeout(()=>{
+      window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(textoBase+'\n'+urlApp)}`, '_blank');
+      _mostrarAvisoDescarga('WhatsApp', 'Adjunta la imagen descargada al mensaje');
+    }, 300);
+    return;
+  }
+
+  // Instagram y TikTok — no tienen API web. Descarga + instrucciones
+  if(red === 'instagram' || red === 'tiktok'){
+    if(url) descargarImagen();
+    _mostrarAvisoDescarga(
+      red === 'instagram' ? 'Instagram' : 'TikTok',
+      'Abre la app desde tu móvil, crea una publicación y adjunta la imagen descargada'
+    );
+    return;
+  }
+
+  // Fallback final
+  if(url) descargarImagen();
+}
+
+function _mostrarAvisoDescarga(red, extra){
+  const aviso = document.createElement('div');
+  aviso.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#131a16;border:1px solid rgba(29,158,117,0.4);border-radius:10px;padding:12px 20px;font-family:Inter,sans-serif;font-size:11px;color:#c8ddd0;z-index:99999;text-align:center;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+  aviso.innerHTML = `📥 Imagen guardada en tu dispositivo<br><span style="color:#a8c4b0;font-size:10px;margin-top:3px;display:block;">${extra || 'Compártela en '+red+' desde tu galería'}</span>`;
+  document.body.appendChild(aviso);
+  setTimeout(()=>aviso.remove(), 5000);
+}
+
+function descargarImagen(){
+  const url = window._shareImgDataUrl;
+  if(!url) return;
+  const a = document.createElement('a');
+  a.href = url; a.download = 'tactiq-analisis.png';
+  a.click();
+}
+
+async function compartirImagen(){
+  const url = window._shareImgDataUrl;
+  const txt = document.getElementById('share-text')?.value || '';
+  if(!url) return;
+  try {
+    const blob = await (await fetch(url)).blob();
+    const file = new File([blob], 'tactiq-analisis.png', { type:'image/png' });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file], text:txt, title:'Análisis táctico — tactiq' });
+    } else if(navigator.share){
+      await navigator.share({ text:txt, url:'https://tactiqfutbol.es' });
+    } else {
+      descargarImagen();
+    }
+  } catch(e){ descargarImagen(); }
+}
+
+// ═══════════════════════════════════════════════
+// MODO VESTUARIO
+// ═══════════════════════════════════════════════
+let modoVestuarioActivo = false;
+
+function modoVestuario(){
+  modoVestuarioActivo = !modoVestuarioActivo;
+  if(modoVestuarioActivo){
+    // Crear overlay vestuario a pantalla completa
+    const overlay = document.createElement('div');
+    overlay.id = 'vestuario-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#0e1210;z-index:9000;display:flex;flex-direction:column;overflow:hidden;';
+
+    const p = partido;
+    const nosotros = p.rol === 'Local' ? p.local : p.visitante;
+    const rival = p.rol === 'Local' ? p.visitante : p.local;
+    const evs = p.eventos.filter(e=>!e.obligatorio);
+    const goles = evs.filter(e=>e.tipo==='gol').length;
+    const golesContra = evs.filter(e=>e.tipo==='gol-contra').length;
+    const resultado = goles > golesContra ? 'VICTORIA' : goles < golesContra ? 'DERROTA' : 'EMPATE';
+    const resColor = goles > golesContra ? '#1D9E75' : goles < golesContra ? '#f87171' : '#fcd34d';
+
+    overlay.innerHTML = `
+      <div style="flex:1;display:flex;flex-direction:column;padding:32px 48px;gap:20px;position:relative;overflow:hidden;">
+        <!-- marca de agua grande -->
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <span style="font-size:180px;font-weight:800;color:rgba(29,158,117,0.04);letter-spacing:-8px;">tactiq</span>
+        </div>
+        <!-- header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;height:44px;background:#1D9E75;border-radius:11px;display:flex;align-items:center;justify-content:center;">
+              <svg width="24" height="24" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.2" fill="white"/><circle cx="9" cy="2.5" r="1.4" fill="white"/><circle cx="9" cy="15.5" r="1.4" fill="white"/><circle cx="2.5" cy="9" r="1.4" fill="white"/><circle cx="15.5" cy="9" r="1.4" fill="white"/><line x1="9" y1="9" x2="9" y2="2.5" stroke="white" stroke-width="0.8"/><line x1="9" y1="9" x2="9" y2="15.5" stroke="white" stroke-width="0.8"/><line x1="9" y1="9" x2="2.5" y2="9" stroke="white" stroke-width="0.8"/><line x1="9" y1="9" x2="15.5" y2="9" stroke="white" stroke-width="0.8"/></svg>
+            </div>
+            <span style="font-size:28px;font-weight:500;color:#fff;letter-spacing:-0.5px;">tactiq</span>
+          </div>
+          <button onclick="cerrarVestuario()" style="background:rgba(255,255,255,0.06);border:1px solid #1e2d24;border-radius:8px;padding:8px 16px;color:#a8c4b0;font-family:Inter,sans-serif;font-size:12px;cursor:pointer;">✕ Salir</button>
+        </div>
+        <!-- resultado grande -->
+        <div style="text-align:center;flex-shrink:0;">
+          <div style="font-size:13px;color:#a8c4b0;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">${p.jornada?'Jornada '+p.jornada:'Partido'} ${p.fecha?'· '+p.fecha:''}</div>
+          <div style="font-size:64px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1;">${nosotros} <span style="color:${resColor};">${goles} — ${golesContra}</span> ${rival}</div>
+          <div style="font-size:18px;font-weight:700;color:${resColor};margin-top:8px;letter-spacing:2px;text-transform:uppercase;">${resultado}</div>
+        </div>
+        <!-- KPIs grandes -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;flex-shrink:0;">
+          <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:11px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Goles</div>
+            <div style="font-size:40px;font-weight:800;color:#1D9E75;line-height:1;">${goles}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:11px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Tiros</div>
+            <div style="font-size:40px;font-weight:800;color:#c8ddd0;line-height:1;">${evs.filter(e=>e.tipo==='tiro-puerta').length}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:11px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Recuper.</div>
+            <div style="font-size:40px;font-weight:800;color:#5DCAA5;line-height:1;">${evs.filter(e=>e.tipo==='recuperacion').length}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:11px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Pases pel.</div>
+            <div style="font-size:40px;font-weight:800;color:#60a5fa;line-height:1;">${evs.filter(e=>e.tipo==='pase-peligro').length}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:11px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Acciones</div>
+            <div style="font-size:40px;font-weight:800;color:#c8ddd0;line-height:1;">${evs.length}</div>
+          </div>
+        </div>
+        <!-- footer -->
+        <div style="margin-top:auto;text-align:center;font-size:11px;color:#8aaa96;">tactiqfutbol.es · análisis táctico con inteligencia artificial</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    // ESC para salir
+    document.addEventListener('keydown', _vestuarioEsc);
+  } else {
+    cerrarVestuario();
+  }
+}
+
+function _vestuarioEsc(e){ if(e.key==='Escape') cerrarVestuario(); }
+
+function cerrarVestuario(){
+  modoVestuarioActivo = false;
+  const overlay = document.getElementById('vestuario-overlay');
+  if(overlay) overlay.remove();
+  document.removeEventListener('keydown', _vestuarioEsc);
+}
+
+// ── Historial de partidos ─────────────────────
+async function abrirHistorial(){
+  const overlay = document.getElementById('historial-overlay');
+  const panel   = document.getElementById('historial-panel');
+  overlay.style.display = 'block';
+  panel.style.display = 'flex';
+  setTimeout(()=>{ panel.style.transform = 'translateX(0)'; }, 10);
+
+  const listEl     = document.getElementById('historial-list');
+  const subtitleEl = document.getElementById('historial-subtitle');
+  listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#6a9a7a;font-size:11px;">Cargando...</div>';
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) return;
+
+    const { data: perfil } = await sb.from('perfiles').select('plan,created_at').eq('id', session.user.id).single();
+    const plan = perfil?.plan || 'entrenador';
+
+    let query = sb.from('partidos')
+      .select('id,local,visitante,jornada,fecha,rol,score_local,score_visitante,formacion,eventos,created_at')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if(plan === 'entrenador'){
+      const registro = new Date(perfil?.created_at || Date.now());
+      const ciclosCompletos = Math.floor((Date.now() - registro) / (30*24*60*60*1000));
+      const inicioCiclo = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
+      query = query.gte('created_at', inicioCiclo.toISOString());
+    }
+
+    const { data: partidos, error } = await query;
+    if(error) throw error;
+
+    if(!partidos || partidos.length === 0){
+      listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#6a9a7a;font-size:11px;">Aún no hay partidos registrados.</div>';
+      subtitleEl.textContent = '0 partidos';
+      return;
+    }
+
+    subtitleEl.textContent = `${partidos.length} partido${partidos.length===1?'':'s'} — ${plan==='entrenador'?'ciclo actual':'historial completo'}`;
+    listEl.innerHTML = '';
+
+    partidos.forEach(p => {
+      const nosotros = p.rol === 'Local' ? p.local : p.visitante;
+      const rival    = p.rol === 'Local' ? p.visitante : p.local;
+      const goles    = p.score_local ?? 0;
+      const golesC   = p.score_visitante ?? 0;
+      const res      = goles > golesC ? 'V' : goles < golesC ? 'D' : 'E';
+      const resColor = res==='V'?'#1D9E75':res==='D'?'#f87171':'#fcd34d';
+      const fecha    = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) : '—';
+      const totalEvs = (p.eventos||[]).filter(e=>!e.obligatorio).length;
+
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#0e1210;border:1px solid #1e2d24;border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color 0.15s;';
+      card.onmouseover = ()=>{ card.style.borderColor='rgba(29,158,117,0.3)'; };
+      card.onmouseout  = ()=>{ card.style.borderColor='#1e2d24'; };
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${p.jornada?`<span style="font-size:8px;color:#a8c4b0;background:#1e2d24;padding:1px 6px;border-radius:10px;">J${p.jornada}</span>`:''}
+            <span style="font-size:8px;color:#a8c4b0;">${fecha}</span>
+          </div>
+          <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}18;border:1px solid ${resColor}30;padding:1px 8px;border-radius:10px;">${res==='V'?'Victoria':res==='D'?'Derrota':'Empate'}</span>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">${nosotros} <span style="color:${resColor};">${goles}–${golesC}</span> ${rival}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:9px;color:#6a9a7a;">${p.formacion||''} · ${totalEvs} acciones</span>
+          <span style="font-size:9px;color:#1D9E75;font-weight:600;">Ver análisis →</span>
+        </div>
+      `;
+      card.onclick = () => {
+        const partidoData = {
+          local: p.local, visitante: p.visitante,
+          jornada: p.jornada, fecha: p.fecha, rol: p.rol,
+          formacion: p.formacion,
+          scoreLocal: p.score_local, scoreVisitante: p.score_visitante,
+          eventos: p.eventos || [],
+          registradoEn: p.created_at
+        };
+        localStorage.setItem('tactiq_ultimo_partido', JSON.stringify(partidoData));
+        window.location.reload();
+      };
+      listEl.appendChild(card);
+    });
+
+    if(plan === 'entrenador'){
+      const aviso = document.createElement('div');
+      aviso.style.cssText = 'text-align:center;padding:10px;font-size:9px;color:#8aaa96;border-top:1px solid #1e2d24;margin-top:4px;';
+      aviso.textContent = 'Plan Entrenador — ciclo actual · Actualiza para ver el historial completo';
+      listEl.appendChild(aviso);
+    }
+  } catch(e){
+    listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171;font-size:11px;">Error cargando partidos.</div>';
+  }
+}
+
+function cerrarHistorial(){
+  const panel   = document.getElementById('historial-panel');
+  const overlay = document.getElementById('historial-overlay');
+  panel.style.transform = 'translateX(100%)';
+  setTimeout(()=>{ panel.style.display='none'; overlay.style.display='none'; }, 250);
+}
+
+// ── Supabase Auth ─────────────────────────────
+const SUPABASE_URL  = 'https://hqxkvmfdmukzgnomdsht.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxeGt2bWZkbXVremdub21kc2h0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTI4OTQsImV4cCI6MjA4OTQ4ODg5NH0.Jml68Ap2yjli7siNOvfISKqXPR6bzypvmDGAiGUSs6s';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+(async function initAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ window.location.href = 'index.html'; return; }
+  const nombre = session.user.user_metadata?.nombre || session.user.email.split('@')[0];
+  const el = document.getElementById('user-display');
+  if(el) el.textContent = nombre;
+
+  // Cargar plan para límite de preguntas IA
+  const { data: perfil } = await sb.from('perfiles').select('plan').eq('id', session.user.id).single();
+  window._perfilIA = perfil;
+  _actualizarContadorIA();
+})();
+
+async function doLogout(){
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>

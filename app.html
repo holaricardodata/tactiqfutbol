@@ -1,0 +1,2731 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tactiq — football intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<body>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#5DCAA5;--bg:#0e1210;--bg2:#131a16;--border:#1e2d24;--text:#e8f0ec;--muted:#a8c4b0;}
+html,body{height:100%;overflow:hidden;}
+/* LOADING SCREEN */
+.tq-loading{position:fixed;inset:0;background:#0e1210;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity 0.4s ease;}
+.tq-loading.fade-out{opacity:0;pointer-events:none;}
+.tq-loading-logo{display:flex;align-items:center;gap:10px;}
+.tq-loading-icon{width:44px;height:44px;background:#1D9E75;border-radius:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(29,158,117,0.35);}
+.tq-loading-text{font-size:22px;font-weight:500;color:#fff;letter-spacing:-0.5px;}
+.tq-loading-dots{display:flex;gap:6px;}
+.tq-loading-dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;animation:tqPulse 1.2s ease-in-out infinite;}
+.tq-loading-dot:nth-child(2){animation-delay:0.2s;}
+.tq-loading-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes tqPulse{0%,80%,100%{opacity:0.25;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}
+.tq-loading-msg{font-size:11px;color:#6a9a7a;}
+.app{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;width:100%;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;height:48px;display:flex;align-items:center;gap:0;flex-shrink:0;}
+.logo-wrap{display:flex;align-items:center;gap:8px;padding-right:14px;flex-shrink:0;}
+.logo-icon{width:28px;height:28px;background:var(--green);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-text{font-family:'Inter',sans-serif;font-weight:500;font-size:18px;letter-spacing:-0.5px;color:#fff;}
+.top-divider{width:1px;height:24px;background:var(--border);flex-shrink:0;margin:0 14px;}
+.btn-instrucciones{background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.25);border-radius:6px;padding:0 12px;height:28px;display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;color:#7aaa88;transition:all 0.15s;white-space:nowrap;}
+.btn-instrucciones:hover{background:rgba(29,158,117,0.15);border-color:rgba(29,158,117,0.5);color:#a8d4b8;}
+
+/* panel flotante instrucciones */
+.float-panel{position:fixed;top:56px;left:14px;width:300px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.6);animation:slideDown 0.2s ease;}
+.float-panel.hidden{display:none;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.float-panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.float-panel-title{font-size:12px;font-weight:600;color:var(--text);}
+.float-panel-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 2px;transition:color 0.15s;}
+.float-panel-close:hover{color:var(--text);}
+.float-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;}
+.float-step:last-child{margin-bottom:0;}
+.float-num{width:20px;height:20px;border-radius:50%;border:1px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:var(--green);flex-shrink:0;margin-top:1px;}
+.float-step-txt{font-size:11px;color:var(--muted);line-height:1.5;}
+.float-step-txt strong{color:#c8ddd0;font-weight:500;}
+.float-divider{height:1px;background:var(--border);margin:12px 0;}
+.float-export{font-size:10px;color:#a8c4b0;text-align:center;}
+.float-export span{color:var(--green-light);font-weight:500;}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;flex:1;gap:1px;background:var(--border);min-height:0;overflow:hidden;}
+.panel{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;min-height:0;position:relative;}
+.panel-hdr{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 10px;height:32px;display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.panel-hdr-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.panel-hdr-title{font-size:10px;font-weight:600;color:#9dbfaa;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap;}
+.step{width:18px;height:18px;border-radius:50%;border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);flex-shrink:0;line-height:1;margin-left:auto;}
+.panel-empty{flex:1;display:flex;align-items:center;justify-content:center;}
+.panel-empty-txt{font-size:12px;color:#6a9a7a;font-weight:500;}
+
+/* URL input */
+.url-inp{background:#0a0e0c;border:1px solid #2a3d30;border-radius:4px;padding:2px 7px;color:#c8ddd0;font-family:'Inter',sans-serif;font-size:11px;outline:none;flex:1;min-width:0;max-width:320px;height:22px;transition:border-color 0.15s;}
+.url-inp:focus{border-color:var(--green);}
+.url-inp::placeholder{color:#a8c4b0;}
+.btn-play{background:var(--green);border:none;cursor:pointer;padding:0;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 0 #0d5c42;transition:all 0.12s;position:relative;top:0;}
+.btn-play:hover{background:var(--green-dark);}
+.btn-play:active{top:1px;box-shadow:0 1px 0 #0d5c42;}
+.video-inner{flex:1;background:#000;display:flex;align-items:center;justify-content:center;min-height:0;position:relative;}
+.video-inner iframe{width:100%;height:100%;border:none;}
+.yt-overlay{position:absolute;top:0;left:0;right:0;bottom:42px;z-index:10;}
+
+/* barra de tiempo */
+.pitch-timeline{flex-shrink:0;padding:5px 10px 6px;background:var(--bg2);border-top:1px solid var(--border);}
+.ptl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.ptl-clock{font-size:16px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:1.5px;font-family:'Inter',sans-serif;background:#0a1a10;padding:2px 8px;border-radius:5px;border:1px solid rgba(29,158,117,0.3);box-shadow:0 0 8px rgba(29,158,117,0.15);text-shadow:0 0 6px rgba(93,202,165,0.3);}
+.ptl-clock.paused{color:#d97706;text-shadow:0 0 6px rgba(217,119,6,0.3);border-color:rgba(217,119,6,0.3);box-shadow:0 0 8px rgba(217,119,6,0.12);}
+.ptl-status{display:flex;align-items:center;gap:4px;}
+.ptl-dot{width:6px;height:6px;border-radius:50%;background:#3a5044;flex-shrink:0;}
+.ptl-dot.live{background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 1.5s infinite;}
+.ptl-dot.paused-dot{background:#d97706;}
+.ptl-lbl{font-size:8px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);}
+.ptl-lbl.live{color:var(--green-light);}
+.ptl-lbl.paused-lbl{color:#d97706;}
+
+/* barra con eventos */
+.ptl-bar-wrap{position:relative;height:32px;}
+.ptl-events-layer{position:absolute;bottom:4px;left:0;right:0;height:28px;pointer-events:none;}
+.ptl-ev-pin{position:absolute;bottom:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:0;}
+.ptl-ev-line{width:1px;height:18px;background:currentColor;opacity:0.35;}
+.ptl-ev-icon{font-size:10px;line-height:1;margin-bottom:1px;}
+.ptl-track{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;}
+.ptl-fill{height:100%;background:var(--green);border-radius:2px;transition:width 0.4s linear;width:0%;}
+.ptl-fill.paused{background:#d97706;}
+
+/* cursor posición actual */
+.ptl-cursor{position:absolute;bottom:2px;transform:translateX(-50%);z-index:5;pointer-events:none;}
+.ptl-cursor-icon{width:12px;height:12px;background:var(--green);border-radius:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 6px rgba(29,158,117,0.7);}
+.ptl-req-marker{position:absolute;bottom:0;width:2px;height:5px;background:var(--green-light);border-radius:1px;transform:translateX(-50%);opacity:0.7;}
+.match-form{display:flex;flex-direction:column;overflow-y:auto;padding:10px 12px 0;gap:6px;flex-shrink:0;}
+.match-form::-webkit-scrollbar{width:3px;}
+.match-form::-webkit-scrollbar-thumb{background:var(--border);}
+.match-form-title{font-size:11px;font-weight:600;color:var(--text);margin-bottom:1px;}
+.match-form-sub{font-size:9px;color:#a8c4b0;line-height:1.4;}
+.match-form-sub em{color:#a8c4b0;font-style:normal;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.form-row.single{grid-template-columns:1fr;}
+.form-field{display:flex;flex-direction:column;gap:2px;}
+.form-label{font-size:8px;font-weight:600;color:#a8c4b0;letter-spacing:0.5px;text-transform:uppercase;}
+.form-input{background:#0a0e0c;border:1px solid #2a3d30;border-radius:5px;padding:4px 7px;color:#c8ddd0;font-family:'Inter',sans-serif;font-size:10px;outline:none;width:100%;transition:border-color 0.15s;}
+.form-input:focus{border-color:var(--green);}
+.form-input::placeholder{color:#6a9a7a;}
+.form-select{background:#0a0e0c;border:1px solid #2a3d30;border-radius:5px;padding:4px 7px;color:#c8ddd0;font-family:'Inter',sans-serif;font-size:10px;outline:none;width:100%;cursor:pointer;transition:border-color 0.15s;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a7a66'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;}
+.form-select:focus{border-color:var(--green);}
+.form-select option{background:#0e1210;color:#c8ddd0;}
+
+/* mini campo de formaciones */
+.formation-section{display:flex;gap:8px;flex:1;min-height:0;margin-top:2px;}
+.formation-left{display:flex;flex-direction:column;gap:5px;width:120px;flex-shrink:0;}
+.formation-pitch-wrap{flex:1;position:relative;background:#145a2e;border-radius:5px;border:1px solid var(--border);overflow:hidden;min-height:0;}
+.fp-player{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:0;cursor:default;z-index:2;}
+.fp-num{width:16px;height:16px;background:var(--green);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;}
+.fp-name-input{font-size:7px;color:#c8ddd0;background:rgba(0,0,0,0.7);border:none;border-radius:3px;outline:none;width:0;max-width:0;opacity:0;text-align:center;font-family:'Inter',sans-serif;padding:0;transition:all 0.15s;position:absolute;top:18px;left:50%;transform:translateX(-50%);pointer-events:none;white-space:nowrap;}
+.fp-player:hover .fp-name-input{width:60px;max-width:60px;opacity:1;pointer-events:all;border:1px solid var(--border);padding:1px 3px;z-index:20;}
+.btn-empezar-wrap{flex-shrink:0;padding:12px 14px 16px;}
+.btn-empezar{width:100%;background:linear-gradient(180deg,#22b882 0%,#1D9E75 50%,#178a63 100%);border:none;border-radius:7px;padding:9px 0;font-family:'Inter',sans-serif;font-weight:700;font-size:12px;color:#fff;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;box-shadow:0 3px 0 #0d5c42, 0 5px 10px rgba(0,0,0,0.4);position:relative;top:0;}
+.btn-empezar:hover{background:linear-gradient(180deg,#25cc8e 0%,#20a87c 50%,#1a9068 100%);box-shadow:0 4px 0 #0d5c42, 0 8px 16px rgba(0,0,0,0.45);}
+.btn-empezar:active{top:3px;box-shadow:0 1px 0 #0d5c42, 0 2px 6px rgba(0,0,0,0.3);}
+
+/* pantalla espera inicio — nueva */
+.wait-inicio-screen{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0;padding:16px 14px;}
+.wait-btn-inicio{
+  background:linear-gradient(180deg,rgba(217,119,6,0.22) 0%,rgba(180,83,9,0.28) 100%);
+  border:2px solid rgba(217,119,6,0.8);
+  border-bottom:4px solid rgba(180,83,9,0.9);
+  border-radius:12px;
+  padding:15px 28px;
+  font-family:'Inter',sans-serif;font-weight:800;font-size:14px;
+  color:#fde68a;cursor:pointer;letter-spacing:0.5px;
+  transition:all 0.1s;
+  box-shadow:0 6px 24px rgba(217,119,6,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+  position:relative;top:0;
+  text-shadow:0 1px 4px rgba(0,0,0,0.4);
+}
+.wait-btn-inicio:hover{
+  background:linear-gradient(180deg,rgba(217,119,6,0.32) 0%,rgba(180,83,9,0.38) 100%);
+  border-color:rgba(253,211,77,0.9);
+  box-shadow:0 8px 28px rgba(217,119,6,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  color:#fef3c7;
+}
+.wait-btn-inicio:active{top:3px;border-bottom-width:1px;box-shadow:0 2px 8px rgba(217,119,6,0.2);}
+.wait-bottom-row{width:100%;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;}
+.wait-hint{display:flex;flex-direction:column;gap:3px;max-width:45%;}
+.wait-hint-label{font-size:10px;font-weight:600;color:#6a9a7a;letter-spacing:0.5px;text-transform:uppercase;}
+.wait-hint-txt{font-size:12px;color:#a8c4b0;line-height:1.4;}
+
+/* chips obligatorios — ahora son botones */
+.required-list{flex-shrink:0;padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;}
+.req-chip{display:flex;align-items:center;gap:4px;padding:3px 7px;border-radius:20px;border:1px solid var(--border);font-size:9px;font-weight:600;color:#6a9a7a;letter-spacing:0.3px;white-space:nowrap;transition:all 0.2s;background:none;font-family:'Inter',sans-serif;cursor:default;}
+.req-chip.pending{border-color:rgba(239,68,68,0.3);color:#ef4444;background:rgba(239,68,68,0.05);cursor:default;}
+.req-chip.next{border-color:rgba(217,119,6,0.45);color:#d97706;background:rgba(217,119,6,0.08);animation:chipPulse 2s infinite;cursor:pointer;}
+.req-chip.next:hover{background:rgba(217,119,6,0.18);border-color:#d97706;}
+@keyframes chipPulse{0%,100%{opacity:1}50%{opacity:0.55}}
+.req-chip.done{border-color:rgba(29,158,117,0.3);color:var(--green-light);background:rgba(29,158,117,0.07);cursor:default;}
+.req-chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* jugadores */
+.jugadores-wrap{flex-shrink:0;padding:6px 10px 8px;border-bottom:1px solid var(--border);}
+.jugadores-label{font-size:8px;font-weight:600;color:#a8c4b0;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:5px;}
+.jugadores-list{display:flex;gap:3px;flex-wrap:wrap;}
+.jug-pill{display:flex;align-items:center;gap:4px;padding:5px 7px;border-radius:20px;border:1px solid rgba(255,255,255,0.18);background:transparent;cursor:pointer;font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#fff;transition:all 0.12s;white-space:nowrap;text-align:left;}
+.jug-pill:hover{border-color:rgba(255,255,255,0.38);background:rgba(255,255,255,0.05);}
+.jug-pill.selected{background:rgba(249,115,22,0.18);border-color:#f97316;color:#f97316;box-shadow:0 0 6px rgba(249,115,22,0.3);}
+.jug-pill.selected .jug-num{background:#f97316 !important;border-color:#f97316 !important;}
+
+/* tabla eventos */
+.eventos-table-wrap{flex:1;overflow-y:auto;min-height:0;}
+.eventos-table-wrap::-webkit-scrollbar{width:3px;}
+.eventos-table-wrap::-webkit-scrollbar-thumb{background:var(--border);}
+.eventos-table{width:100%;border-collapse:collapse;font-size:10px;}
+.eventos-table thead tr{background:var(--bg2);position:sticky;top:0;}
+.eventos-table th{padding:6px 8px;text-align:left;font-size:8px;font-weight:600;color:#a8c4b0;letter-spacing:0.6px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+.eventos-table td{padding:6px 8px;border-bottom:1px solid rgba(30,45,36,0.5);color:#a8c4b0;vertical-align:middle;}
+.eventos-table tbody tr:hover td{background:rgba(255,255,255,0.02);}
+.ev-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:600;white-space:nowrap;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.14);}
+.ev-badge.obligatorio{background:rgba(29,158,117,0.1);color:var(--green-light);border:1px solid rgba(29,158,117,0.3);}
+/* todos los demás tipos heredan el estilo neutro base */
+.ev-badge.gol,.ev-badge.tiro,.ev-badge.tirof,.ev-badge.amarilla,.ev-badge.roja,.ev-badge.falta,.ev-badge.pase,.ev-badge.perdida,.ev-badge.ocasion,.ev-badge.offside{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.14);}
+
+/* Botones jugada — píldora 3D, borde blanco, naranja al seleccionar */
+.ev-sq{
+  background:linear-gradient(180deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
+  border:1px solid rgba(255,255,255,0.22);
+  border-bottom:2px solid rgba(0,0,0,0.35);
+  border-radius:20px;
+  padding:4px 9px;
+  font-family:'Inter',sans-serif;font-size:10px;font-weight:600;
+  cursor:pointer;transition:all 0.1s;white-space:nowrap;color:#fff;
+  box-shadow:0 2px 4px rgba(0,0,0,0.3);
+  position:relative;top:0;
+}
+.ev-sq:hover{background:linear-gradient(180deg,rgba(255,255,255,0.13) 0%,rgba(255,255,255,0.06) 100%);border-color:rgba(255,255,255,0.38);}
+.ev-sq:active{top:1px;box-shadow:0 1px 2px rgba(0,0,0,0.3);border-bottom-width:1px;}
+.ev-sq.sel-sq{
+  background:linear-gradient(180deg,rgba(251,146,60,0.25) 0%,rgba(234,88,12,0.18) 100%);
+  border-color:#f97316;border-bottom-color:#c2410c;
+  color:#f97316;
+  box-shadow:0 2px 8px rgba(249,115,22,0.35);
+}
+.gol-sq,.tiro-sq,.tirof-sq,.amarilla-sq,.roja-sq,.falta-sq,.pase-sq,.perdida-sq,.ocasion-sq,.offside-sq{border-color:rgba(255,255,255,0.22);color:#fff;}
+.gol-sq.sel-sq,.tiro-sq.sel-sq,.tirof-sq.sel-sq,.amarilla-sq.sel-sq,.roja-sq.sel-sq,.falta-sq.sel-sq,.pase-sq.sel-sq,.perdida-sq.sel-sq,.ocasion-sq.sel-sq,.offside-sq.sel-sq{background:linear-gradient(180deg,rgba(251,146,60,0.25) 0%,rgba(234,88,12,0.18) 100%);border-color:#f97316;border-bottom-color:#c2410c;color:#f97316;box-shadow:0 2px 8px rgba(249,115,22,0.35);}
+
+.ev-del-cell{width:20px;padding:4px 4px 4px 8px !important;}
+.ev-del{background:none;border:none;cursor:pointer;color:#6a9a7a;font-size:10px;line-height:1;padding:2px 3px;border-radius:3px;transition:all 0.15s;}
+.ev-del:hover{color:#ef4444;background:rgba(239,68,68,0.1);}
+.ev-id{color:#6a9a7a;font-size:9px;font-weight:600;font-variant-numeric:tabular-nums;}
+.ev-min{font-variant-numeric:tabular-nums;color:#c8ddd0;font-weight:600;}
+.ev-coords{color:#6a9a7a;font-size:9px;font-variant-numeric:tabular-nums;}
+
+/* guía de pasos */
+.guia-wrap{flex-shrink:0;padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;}
+.guia-step{display:flex;align-items:center;gap:5px;flex:1;}
+.guia-num{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;transition:all 0.2s;}
+.guia-num.pending{background:rgba(255,255,255,0.05);border:1px solid #2a3d30;color:#6a9a7a;}
+.guia-num.active{background:rgba(29,158,117,0.2);border:1px solid var(--green);color:var(--green-light);box-shadow:0 0 8px rgba(29,158,117,0.3);animation:guiaPulse 1.5s infinite;}
+.guia-num.done{background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.4);color:var(--green-light);}
+@keyframes guiaPulse{0%,100%{box-shadow:0 0 6px rgba(29,158,117,0.3)}50%{box-shadow:0 0 12px rgba(29,158,117,0.6)}}
+.guia-txt{font-size:8.5px;color:#6a9a7a;font-weight:500;transition:color 0.2s;white-space:nowrap;}
+.guia-txt.active{color:#a8c4b0;}
+.guia-txt.done{color:#6a9a7a;}
+.guia-arrow{color:#8aaa96;font-size:8px;flex-shrink:0;}
+.eventos-pills{flex-shrink:0;padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;}
+.ev-pill{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid transparent;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;letter-spacing:0.2px;user-select:none;}
+.ev-pill:hover{filter:brightness(1.2);}
+.ev-pill.selected{box-shadow:0 0 0 2px rgba(255,255,255,0.2);}
+.ev-pill.gol{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.18);color:rgba(255,255,255,0.65);}
+.ev-pill.gol.selected{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.5);color:#fff;}
+.ev-pill.amarilla{background:rgba(234,179,8,0.09);border-color:rgba(234,179,8,0.4);color:#fde047;}
+.ev-pill.amarilla.selected{background:rgba(234,179,8,0.22);border-color:#fde047;color:#fef08a;}
+.ev-pill.falta{background:rgba(249,115,22,0.09);border-color:rgba(249,115,22,0.4);color:#fb923c;}
+.ev-pill.falta.selected{background:rgba(249,115,22,0.22);border-color:#fb923c;color:#fed7aa;}
+.events-list::-webkit-scrollbar{width:3px;}
+.events-list::-webkit-scrollbar-thumb{background:var(--border);}
+
+/* botón obligatorio */
+.btn-obligatorio{flex-shrink:0;margin:8px 10px;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.35);border-radius:7px;padding:9px 0;font-family:'Inter',sans-serif;font-weight:600;font-size:11px;color:#fcd34d;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background 0.15s;}
+.btn-obligatorio:hover{background:rgba(217,119,6,0.16);}
+.btn-obligatorio.hidden{display:none;}
+
+/* alerta req */
+.req-alert{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#130a0a;border:1px solid rgba(239,68,68,0.5);border-radius:10px;padding:14px 18px;text-align:center;z-index:80;animation:alertIn 0.2s ease;min-width:190px;pointer-events:none;}
+.req-alert.hidden{display:none;}
+@keyframes alertIn{from{opacity:0;transform:translate(-50%,-54%) scale(0.95)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.req-alert-icon{font-size:18px;margin-bottom:5px;}
+.req-alert-title{font-size:11px;font-weight:600;color:#fca5a5;margin-bottom:3px;}
+.req-alert-msg{font-size:10px;color:#a8c4b0;line-height:1.5;}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:300;}
+.modal-overlay.hidden{display:none;}
+.modal-box{background:#131a16;border:1px solid #1e2d24;border-radius:12px;padding:22px 24px;max-width:260px;width:90%;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,0.7);}
+.modal-icon{font-size:24px;margin-bottom:8px;}
+.modal-title{font-size:13px;font-weight:600;color:#e8f0ec;margin-bottom:6px;}
+.modal-msg{font-size:11px;color:#a8c4b0;line-height:1.55;margin-bottom:14px;}
+.modal-msg strong{color:#fbbf24;}
+.modal-btn{background:var(--green);color:#fff;border:none;border-radius:7px;padding:8px 20px;font-family:'Inter',sans-serif;font-weight:600;font-size:12px;cursor:pointer;width:100%;transition:background 0.15s;}
+.modal-btn:hover{background:var(--green-dark);}
+.modal-btn-sec{background:rgba(255,255,255,0.05);color:#a8c4b0;border:1px solid #1e2d24;border-radius:7px;padding:8px 0;font-family:'Inter',sans-serif;font-weight:500;font-size:12px;cursor:pointer;flex:1;transition:all 0.15s;}
+.modal-btn-sec:hover{background:rgba(255,255,255,0.08);}
+.modal-btn-row{display:flex;gap:8px;}
+
+/* PARTIDO FINAL BAR */
+.partido-final-bar{flex-shrink:0;padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:6px;background:var(--bg2);}
+.btn-reiniciar{flex:1;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);border-radius:7px;padding:7px 0;font-family:'Inter',sans-serif;font-weight:600;font-size:11px;color:#f87171;cursor:pointer;transition:all 0.15s;}
+.btn-reiniciar:hover{background:rgba(239,68,68,0.14);}
+.btn-registrar{flex:2;background:var(--green);border:none;border-radius:7px;padding:7px 0;font-family:'Inter',sans-serif;font-weight:700;font-size:11px;color:#fff;cursor:pointer;transition:background 0.15s;}
+.btn-registrar:hover{background:var(--green-dark);}
+
+/* GUÍA EN HEADER */
+.panel-hdr-guia{display:flex;align-items:center;gap:4px;}
+.etiq-body{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+
+.guia-num{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;transition:all 0.2s;}
+.guia-num.pending{background:rgba(255,255,255,0.05);border:1px solid #2a3d30;color:#6a9a7a;}
+.guia-num.active{background:rgba(29,158,117,0.25);border:1px solid var(--green);color:var(--green-light);animation:guiaPulse 1.5s infinite;}
+.guia-num.done{background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.4);color:var(--green-light);}
+.guia-txt-hdr{font-size:8.5px;font-weight:500;white-space:nowrap;}
+.guia-txt-hdr.active{color:#a8c4b0;}
+.guia-txt-hdr.done{color:#6a9a7a;}
+.guia-txt-hdr.pending{color:#8aaa96;}
+.guia-arrow-hdr{color:#8aaa96;font-size:8px;flex-shrink:0;}
+
+/* OBLIGATORIO BADGE */
+.ev-badge.obligatorio{background:rgba(29,158,117,0.1);color:var(--green-light);border:1px solid rgba(29,158,117,0.3);}
+
+@keyframes arrowPulse{0%,100%{opacity:0.3;transform:translateY(0)}50%{opacity:1;transform:translateY(3px)}}
+@keyframes whistlePulse{0%,100%{opacity:0.4;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+
+/* PITCH */
+.pitch-wrap{flex:1;min-height:0;overflow:hidden;display:flex;align-items:stretch;}
+.pitch-side{flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-start;padding:12px 10px;}
+.pitch-side-left{width:80px;border-right:1px solid var(--border);}
+.pitch-side-right{width:140px;border-left:1px solid var(--border);justify-content:space-between;}
+.pitch-center{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:5px;}
+.pitch-svg{max-width:100%;max-height:100%;display:block;}
+.side-label{font-size:9px;font-weight:600;color:#a8c4b0;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:6px;}
+.side-status{font-size:11px;color:#a8c4b0;line-height:1.5;font-weight:400;}
+.side-status.active{color:#d97706;}
+.side-status.confirmed{color:var(--green-light);}
+.sel-block{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
+.sel-row{display:flex;flex-direction:column;gap:3px;}
+.sel-key{font-size:9px;font-weight:600;color:#a8c4b0;letter-spacing:0.5px;text-transform:uppercase;}
+.sel-val{font-size:11px;color:#a8c4b0;font-weight:400;word-break:break-word;line-height:1.4;}
+.sel-val.has-val{color:#e8f0ec;font-weight:500;}
+.sel-coords{padding-top:6px;border-top:1px solid var(--border);}
+.sel-coords .sel-val{color:#d97706;font-size:10px;}
+.btn-tag-side{background:var(--green);border:none;border-radius:8px;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;color:#fff;cursor:pointer;width:100%;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1;transition:background 0.15s;margin-top:auto;letter-spacing:0.5px;}
+.btn-tag-side:hover{background:var(--green-dark);}
+.btn-tag-side .plus{color:rgba(255,255,255,0.7);font-size:18px;font-weight:300;line-height:1;}
+
+.confirm-toast{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:var(--green-dark);border:1px solid var(--green);color:var(--green-light);border-radius:7px;padding:5px 16px;font-size:11px;font-weight:600;white-space:nowrap;animation:fadeIn 0.2s ease;z-index:60;}
+.confirm-toast.hidden{display:none;}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.popup-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:50;}
+.popup-overlay.hidden{display:none;}
+.popup{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;max-width:220px;width:88%;text-align:center;}
+.popup-icon{font-size:20px;margin-bottom:6px;}
+.popup-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;}
+.popup-msg{font-size:11px;color:var(--muted);line-height:1.5;}
+.popup-msg strong{color:#fbbf24;}
+</style>
+
+<!-- FLOAT PANEL -->
+<div class="float-panel hidden" id="float-panel">
+  <div class="float-panel-hdr">
+    <span class="float-panel-title">Cómo etiquetar una jugada</span>
+    <button class="float-panel-close" onclick="toggleInstrucciones()">✕</button>
+  </div>
+  <div class="float-step"><div class="float-num">1</div><div class="float-step-txt"><strong>Carga el vídeo</strong> — pega una URL de YouTube y pulsa Enter.</div></div>
+  <div class="float-step"><div class="float-num">2</div><div class="float-step-txt"><strong>Etiqueta el inicio de partido</strong> — es obligatorio antes de cualquier otro tag.</div></div>
+  <div class="float-step"><div class="float-num">3</div><div class="float-step-txt"><strong>Sitúa en el campo y pulsa TAG +</strong> — repite por cada evento.</div></div>
+  <div class="float-step"><div class="float-num">4</div><div class="float-step-txt"><strong>Final 1ª parte, inicio 2ª y final de partido</strong> — también obligatorios. Al terminar, registra el partido para cerrar el análisis. Acción definitiva, sin vuelta atrás.</div></div>
+  <div class="float-divider"></div>
+  <div class="float-export">Accede al <span>análisis táctico completo</span> — campogramas interactivos, mapa de calor y chat con inteligencia artificial para extraer conclusiones del partido.</div>
+</div>
+
+<!-- MODAL UPGRADE -->
+<div class="modal-overlay hidden" id="modal-upgrade-overlay" onclick="cerrarUpgrade()">
+  <div onclick="event.stopPropagation()" style="background:#0e1210;border:1px solid #1e2d24;border-radius:16px;padding:28px 24px;max-width:380px;width:94%;box-shadow:0 24px 60px rgba(0,0,0,0.8);font-family:'Inter',sans-serif;">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:22px;">
+      <div style="font-size:28px;margin-bottom:8px;">⚡</div>
+      <div style="font-size:17px;font-weight:700;color:#e8f0ec;letter-spacing:-0.3px;">Lleva tu análisis al siguiente nivel</div>
+      <div style="font-size:11px;color:#5a7a66;margin-top:4px;">Sin permanencia · Cancela cuando quieras</div>
+    </div>
+
+    <!-- Planes -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+
+      <!-- Entrenador -->
+      <div id="upgrade-btn-entrenador" onclick="irACheckout('entrenador')" style="background:#0a1109;border:1px solid #1e2d24;border-radius:10px;padding:13px 16px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(29,158,117,0.4)';this.style.background='#0d1810'" onmouseout="this.style.borderColor='#1e2d24';this.style.background='#0a1109'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">⚽</span>
+            <span style="font-size:13px;font-weight:700;color:#e8f0ec;">Entrenador</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:18px;font-weight:800;color:#1D9E75;">9€</span>
+            <span style="font-size:10px;color:#5a7a66;">/mes</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:9px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);color:#5DCAA5;padding:2px 8px;border-radius:10px;">3 partidos/mes</span>
+          <span style="font-size:9px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);color:#5DCAA5;padding:2px 8px;border-radius:10px;">10 preguntas IA</span>
+          <span style="font-size:9px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);color:#5DCAA5;padding:2px 8px;border-radius:10px;">Historial ciclo actual</span>
+        </div>
+      </div>
+
+      <!-- Analista -->
+      <div id="upgrade-btn-analista" onclick="irACheckout('analista')" style="background:#0a1109;border:1px solid #1e2d24;border-radius:10px;padding:13px 16px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(29,158,117,0.4)';this.style.background='#0d1810'" onmouseout="this.style.borderColor='#1e2d24';this.style.background='#0a1109'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">📊</span>
+            <span style="font-size:13px;font-weight:700;color:#e8f0ec;">Analista</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:18px;font-weight:800;color:#1D9E75;">12€</span>
+            <span style="font-size:10px;color:#5a7a66;">/mes</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:9px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);color:#5DCAA5;padding:2px 8px;border-radius:10px;">5 partidos/mes</span>
+          <span style="font-size:9px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);color:#5DCAA5;padding:2px 8px;border-radius:10px;">20 preguntas IA</span>
+          <span style="font-size:9px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);color:#5DCAA5;padding:2px 8px;border-radius:10px;">Historial completo</span>
+        </div>
+      </div>
+
+      <!-- Élite — destacado -->
+      <div id="upgrade-btn-elite" onclick="irACheckout('elite')" style="background:linear-gradient(135deg,rgba(29,158,117,0.12),rgba(15,110,86,0.08));border:1px solid rgba(29,158,117,0.35);border-radius:10px;padding:13px 16px;cursor:pointer;transition:all 0.15s;position:relative;" onmouseover="this.style.borderColor='#1D9E75';this.style.background='linear-gradient(135deg,rgba(29,158,117,0.2),rgba(15,110,86,0.14))'" onmouseout="this.style.borderColor='rgba(29,158,117,0.35)';this.style.background='linear-gradient(135deg,rgba(29,158,117,0.12),rgba(15,110,86,0.08))'">
+        <div style="position:absolute;top:-9px;right:14px;background:#1D9E75;color:#fff;font-size:8px;font-weight:700;padding:2px 10px;border-radius:10px;letter-spacing:0.5px;">MÁS POPULAR</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">🏆</span>
+            <span style="font-size:13px;font-weight:700;color:#e8f0ec;">Élite</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:18px;font-weight:800;color:#1D9E75;">15€</span>
+            <span style="font-size:10px;color:#5a7a66;">/mes</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:9px;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.3);color:#5DCAA5;padding:2px 8px;border-radius:10px;">10 partidos/mes</span>
+          <span style="font-size:9px;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.3);color:#5DCAA5;padding:2px 8px;border-radius:10px;">30 preguntas IA</span>
+          <span style="font-size:9px;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.3);color:#5DCAA5;padding:2px 8px;border-radius:10px;">Historial completo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <button onclick="cerrarUpgrade()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid #1e2d24;border-radius:8px;padding:9px;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;color:#5a7a66;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#8aaa96'" onmouseout="this.style.color='#5a7a66'">Ahora no</button>
+  </div>
+</div>
+
+<!-- MODAL ALERT -->
+<div class="modal-overlay hidden" id="modal-alert-overlay" onclick="closeModalAlert()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-icon" id="modal-alert-icon">⚠️</div>
+    <div class="modal-title" id="modal-alert-title">Aviso</div>
+    <div class="modal-msg" id="modal-alert-msg"></div>
+    <button class="modal-btn" onclick="closeModalAlert()">Entendido</button>
+  </div>
+</div>
+<!-- MODAL CONFIRM -->
+<div class="modal-overlay hidden" id="modal-confirm-overlay">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-icon" id="modal-confirm-icon">❓</div>
+    <div class="modal-title" id="modal-confirm-title">¿Estás seguro?</div>
+    <div class="modal-msg" id="modal-confirm-msg"></div>
+    <div class="modal-btn-row">
+      <button class="modal-btn-sec" onclick="closeModalConfirm()">Cancelar</button>
+      <button class="modal-btn" id="modal-confirm-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+<!-- LOADING SCREEN -->
+<div class="tq-loading" id="tq-loading">
+  <div class="tq-loading-logo">
+    <div class="tq-loading-icon">
+      <svg width="24" height="24" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.2" fill="white"/><circle cx="9" cy="2.5" r="1.4" fill="white" opacity="0.9"/><circle cx="9" cy="15.5" r="1.4" fill="white" opacity="0.9"/><circle cx="2.5" cy="9" r="1.4" fill="white" opacity="0.9"/><circle cx="15.5" cy="9" r="1.4" fill="white" opacity="0.9"/><line x1="9" y1="9" x2="9" y2="2.5" stroke="white" stroke-width="0.8" opacity="0.45"/><line x1="9" y1="9" x2="9" y2="15.5" stroke="white" stroke-width="0.8" opacity="0.45"/><line x1="9" y1="9" x2="2.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.45"/><line x1="9" y1="9" x2="15.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.45"/></svg>
+    </div>
+    <span class="tq-loading-text">tactiqfutbol<span style="font-size:14px;font-weight:400;color:#5DCAA5;">.es</span></span>
+  </div>
+  <div class="tq-loading-dots">
+    <div class="tq-loading-dot"></div>
+    <div class="tq-loading-dot"></div>
+    <div class="tq-loading-dot"></div>
+  </div>
+  <div class="tq-loading-msg">Cargando tu sesión...</div>
+</div>
+  <div class="topbar">
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+          <circle cx="9" cy="9" r="2.2" fill="white"/>
+          <circle cx="9" cy="2.5" r="1.4" fill="white" opacity="0.9"/>
+          <circle cx="9" cy="15.5" r="1.4" fill="white" opacity="0.9"/>
+          <circle cx="2.5" cy="9" r="1.4" fill="white" opacity="0.9"/>
+          <circle cx="15.5" cy="9" r="1.4" fill="white" opacity="0.9"/>
+          <circle cx="3.8" cy="3.8" r="1.1" fill="white" opacity="0.55"/>
+          <circle cx="14.2" cy="3.8" r="1.1" fill="white" opacity="0.55"/>
+          <circle cx="3.8" cy="14.2" r="1.1" fill="white" opacity="0.55"/>
+          <circle cx="14.2" cy="14.2" r="1.1" fill="white" opacity="0.55"/>
+          <line x1="9" y1="9" x2="9" y2="2.5" stroke="white" stroke-width="0.8" opacity="0.45"/>
+          <line x1="9" y1="9" x2="9" y2="15.5" stroke="white" stroke-width="0.8" opacity="0.45"/>
+          <line x1="9" y1="9" x2="2.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.45"/>
+          <line x1="9" y1="9" x2="15.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.45"/>
+        </svg>
+      </div>
+      <span class="logo-text">tactiqfutbol<span style="font-size:14px;font-weight:400;color:#5DCAA5;letter-spacing:0;">.es</span></span>
+    </div>
+    <div class="top-divider"></div>
+    <button class="btn-instrucciones" onclick="toggleInstrucciones()">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7aaa88" stroke-width="1"/><text x="7" y="11" text-anchor="middle" font-size="8" fill="#7aaa88" font-family="Inter" font-weight="600">?</text></svg>
+      Cómo etiquetar
+    </button>
+    <button onclick="abrirFAQ()" style="height:28px;width:28px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:#7a9a86;cursor:pointer;transition:all 0.15s;margin-left:4px;" onmouseover="this.style.color='#c8ddd0';this.style.borderColor='rgba(255,255,255,0.25)'" onmouseout="this.style.color='#7a9a86';this.style.borderColor='rgba(255,255,255,0.12)'" title="Preguntas frecuentes">FAQ</button>
+
+
+    <!-- INFO PARTIDO — centro, solo visible cuando hay datos -->
+    <div id="topbar-match-info" style="display:none;flex-direction:column;align-items:center;justify-content:center;margin:0 auto;line-height:1.2;">
+      <div style="font-size:11px;font-weight:600;color:#c8ddd0;letter-spacing:0.2px;" id="tmi-equipos">—</div>
+      <div style="font-size:9px;font-style:italic;color:#a8c4b0;" id="tmi-meta">—</div>
+    </div>
+
+    <!-- DERECHA: usuario + partidos + upgrade -->
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+
+      <!-- botón upgrade — a la izquierda del contador -->
+      <button onclick="abrirUpgrade()" style="height:28px;padding:0 12px;border-radius:6px;background:linear-gradient(135deg,#1D9E75,#0F6E56);border:none;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#fff;cursor:pointer;letter-spacing:0.3px;display:flex;align-items:center;gap:5px;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polygon points="6,1 8,5 12,5 9,8 10,12 6,9 2,12 3,8 0,5 4,5" fill="white" opacity="0.9"/></svg>
+        Ver planes
+      </button>
+
+      <!-- contador partidos del mes -->
+      <div style="display:flex;align-items:center;gap:5px;padding:0 10px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.5" stroke="#8aaa96" stroke-width="1"/><line x1="4" y1="1" x2="4" y2="3" stroke="#8aaa96" stroke-width="1" stroke-linecap="round"/><line x1="8" y1="1" x2="8" y2="3" stroke="#8aaa96" stroke-width="1" stroke-linecap="round"/><line x1="3" y1="6" x2="9" y2="6" stroke="#5a7a66" stroke-width="0.8"/></svg>
+        <span style="font-size:10px;color:#a8c4b0;" id="match-counter">0 / 3 partidos</span>
+      </div>
+
+      <!-- usuario -->
+      <div style="display:flex;align-items:center;gap:5px;padding:0 10px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="#8aaa96" stroke-width="1.2"/><path d="M2 12c0-2.8 2.2-4 5-4s5 1.2 5 4" stroke="#8aaa96" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span style="font-size:10px;color:#c8ddd0;font-weight:500;" id="user-display">...</span>
+      </div>
+
+      <!-- botón gestionar plan — solo visible para planes de pago -->
+      <button onclick="gestionarPlan()" id="btn-gestionar-plan" style="display:none;height:28px;padding:0 10px;border-radius:6px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.25);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#5DCAA5;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(29,158,117,0.16)'" onmouseout="this.style.background='rgba(29,158,117,0.08)'">
+        Gestionar plan
+      </button>
+
+      <!-- botón cerrar sesión -->
+      <button onclick="doLogout()" style="height:28px;padding:0 10px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#a8c4b0;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#f87171';this.style.borderColor='rgba(248,113,113,0.3)'" onmouseout="this.style.color='#5a7a66';this.style.borderColor='rgba(255,255,255,0.12)'">
+        Salir
+      </button>
+
+      </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1 VÍDEO -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-hdr-dot"></div>
+        <span class="panel-hdr-title">Vídeo</span>
+        <input class="url-inp" id="yt-url" placeholder="URL YouTube (público u oculto)"/>
+        <button class="btn-play" onclick="loadVideo()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polygon points="4,2 10,6 4,10" fill="white"/></svg>
+        </button>
+        <div class="step">1</div>
+      </div>
+      <div class="video-inner" id="video-wrap">
+        <div class="vid-ph">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#1D9E75" stroke-width="1" opacity="0.25"/><polygon points="10,8 17,12 10,16" fill="#1D9E75" opacity="0.3"/></svg>
+          <p>Introduce una URL de YouTube para cargar el vídeo</p>
+          <p style="font-size:9px;color:#6a9a7a;margin-top:6px;">⚠ Si el vídeo no carga, desactiva el bloqueador de anuncios para esta página</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 ETIQUETADO -->
+    <div class="panel" id="etiq-panel">
+      <div class="panel-hdr">
+        <div class="panel-hdr-dot"></div>
+        <span class="panel-hdr-title">Etiquetado de eventos</span>
+        <!-- separador izq -->
+        <div id="guia-hdr" style="display:none;flex:1;align-items:center;gap:4px;margin-left:8px;overflow:hidden;">
+          <!-- línea divisoria 1 -->
+          <div style="width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 8px;"></div>
+          <!-- guia centrada -->
+          <div style="display:flex;align-items:center;gap:4px;flex:1;justify-content:center;">
+            <div class="guia-num active" id="g1">1</div>
+            <span class="guia-txt-hdr active" id="g1t">Jugada</span>
+            <span class="guia-arrow-hdr">›</span>
+            <div class="guia-num pending" id="g2">2</div>
+            <span class="guia-txt-hdr pending" id="g2t">Jugador</span>
+            <span class="guia-arrow-hdr">›</span>
+            <div class="guia-num pending" id="g3">3</div>
+            <span class="guia-txt-hdr pending" id="g3t">Campo</span>
+            <span class="guia-arrow-hdr">›</span>
+            <div class="guia-num pending" id="g4">4</div>
+            <span class="guia-txt-hdr pending" id="g4t">TAG +</span>
+          </div>
+          <!-- línea divisoria 2 -->
+          <div style="width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 8px;"></div>
+          <!-- chips obligatorios justificados a la derecha -->
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+            <button class="req-chip done"    id="req-inicio"  disabled onclick="tagObligatorio()"><div class="req-chip-dot"></div>Inicio</button>
+            <button class="req-chip next"    id="req-fin1"    onclick="tagObligatorio()"><div class="req-chip-dot"></div>Final 1ª</button>
+            <button class="req-chip pending" id="req-inicio2" disabled onclick="tagObligatorio()"><div class="req-chip-dot"></div>Inicio 2ª</button>
+            <button class="req-chip pending" id="req-fin"     disabled onclick="tagObligatorio()"><div class="req-chip-dot"></div>Final</button>
+          </div>
+        </div>
+        <div class="step" style="flex-shrink:0;margin-left:auto;">2</div>
+      </div>
+      <div class="etiq-body">
+
+        <!-- ESTADO 0: Formulario info partido -->
+        <div id="etiq-form" style="position:relative;flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+
+          <div style="flex:1;overflow-y:auto;padding:4px 12px 48px;display:flex;gap:0;align-items:flex-start;">
+
+            <!-- COL 1: Info partido — ancho fijo -->
+            <div style="display:flex;flex-direction:column;gap:6px;width:155px;flex-shrink:0;padding-right:10px;border-right:1px solid var(--border);">
+              <div>
+                <div class="match-form-title">Información del partido</div>
+                <div style="font-size:9px;color:#a8c4b0;margin-top:2px;line-height:1.4;">Todo opcional. <em style="color:#a8c4b0;">Cuanta más info añadas, más completo será tu análisis.</em></div>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Equipo local</label>
+                <input class="form-input" id="fi-local" placeholder="Equipo local"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Equipo visitante</label>
+                <input class="form-input" id="fi-visitante" placeholder="Equipo visitante"/>
+              </div>
+              <!-- CHECK: hoy jugamos de... -->
+              <div class="form-field">
+                <label class="form-label">Hoy jugamos de</label>
+                <div style="display:flex;gap:6px;margin-top:2px;">
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border-radius:5px;border:1px solid #2a3d30;background:#0a0e0c;flex:1;transition:all 0.12s;" id="lbl-local">
+                    <input type="radio" name="rol-equipo" id="rol-local" value="local" onchange="updateRol()" style="display:none;"/>
+                    <div style="width:10px;height:10px;border-radius:50%;border:1.5px solid #5a7a66;flex-shrink:0;" id="dot-local"></div>
+                    <span style="font-size:9px;color:#a8c4b0;">Local</span>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border-radius:5px;border:1px solid #2a3d30;background:#0a0e0c;flex:1;transition:all 0.12s;" id="lbl-visitante">
+                    <input type="radio" name="rol-equipo" id="rol-visitante" value="visitante" onchange="updateRol()" style="display:none;"/>
+                    <div style="width:10px;height:10px;border-radius:50%;border:1.5px solid #5a7a66;flex-shrink:0;" id="dot-visitante"></div>
+                    <span style="font-size:9px;color:#a8c4b0;">Visitante</span>
+                  </label>
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Jornada</label>
+                <select class="form-select" id="fi-jornada">
+                  <option value="">— Seleccionar —</option>
+                  ${Array.from({length:42},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("")}
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Fecha</label>
+                <input class="form-input" id="fi-fecha" type="date"/>
+              </div>
+            </div>
+
+            <!-- COL 2: Formación + campo (ancho fijo más estrecho) -->
+            <div style="display:flex;flex-direction:column;gap:4px;width:220px;flex-shrink:0;padding:0 8px;border-right:1px solid var(--border);">
+              <div class="form-field">
+                <label class="form-label">Formación</label>
+                <select class="form-select" id="fi-formacion-local" onchange="renderFormation()">
+                  <option value="">— Seleccionar —</option>
+                  <option>4-4-2</option><option>4-3-3</option><option>4-2-3-1</option>
+                  <option>4-1-4-1</option><option>4-5-1</option><option>3-5-2</option>
+                  <option>3-4-3</option><option>5-3-2</option><option>5-4-1</option>
+                  <option>4-3-2-1</option><option>4-4-1-1</option><option>3-6-1</option>
+                </select>
+              </div>
+              <div id="formation-pitch" style="height:215px;position:relative;background:#145a2e;border-radius:5px;border:1px solid var(--border);overflow:hidden;">
+                <svg width="100%" height="100%" viewBox="0 0 100 133" preserveAspectRatio="none" style="position:absolute;inset:0;">
+                  <rect width="100" height="133" fill="#145a2e"/>
+                  <rect x="0" y="0" width="12.5" height="133" fill="#176333"/>
+                  <rect x="25" y="0" width="12.5" height="133" fill="#176333"/>
+                  <rect x="50" y="0" width="12.5" height="133" fill="#176333"/>
+                  <rect x="75" y="0" width="12.5" height="133" fill="#176333"/>
+                  <rect x="2" y="2" width="76" height="129" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1"/>
+                  <line x1="2" y1="66.5" x2="78" y2="66.5" stroke="rgba(255,255,255,0.4)" stroke-width="0.7"/>
+                  <circle cx="40" cy="66.5" r="12" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.7"/>
+                  <rect x="18" y="2" width="44" height="20" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.7"/>
+                  <rect x="28" y="2" width="24" height="9" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.7"/>
+                  <rect x="33" y="0" width="14" height="2" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+                  <rect x="18" y="111" width="44" height="20" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.7"/>
+                  <rect x="28" y="122" width="24" height="9" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.7"/>
+                  <rect x="33" y="131" width="14" height="2" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+                  <circle cx="40" cy="16" r="1" fill="rgba(255,255,255,0.5)"/>
+                  <circle cx="40" cy="117" r="1" fill="rgba(255,255,255,0.5)"/>
+                  <circle cx="40" cy="66.5" r="1" fill="rgba(255,255,255,0.5)"/>
+                  <line x1="80" y1="2" x2="80" y2="131" stroke="rgba(255,255,255,0.2)" stroke-width="0.5" stroke-dasharray="2,2"/>
+                  <text x="90" y="8" text-anchor="middle" font-size="4" fill="rgba(255,255,255,0.35)" font-family="Inter">SUP</text>
+                </svg>
+                <div id="fp-players-local" style="position:absolute;inset:0;"></div>
+              </div>
+            </div>
+
+            <!-- COL 3: Lista jugadores (ocupa el resto) -->
+            <div style="flex:1;min-width:0;padding-left:10px;max-height:240px;overflow-y:auto;">
+              <!-- PLANTILLA: guardar/cargar -->
+              <div style="display:flex;gap:4px;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid var(--border);">
+                <button onclick="guardarPlantilla()" style="flex:1;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.25);border-radius:5px;padding:3px 6px;font-family:'Inter',sans-serif;font-size:9px;font-weight:600;color:var(--green-light);cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='rgba(29,158,117,0.16)'" onmouseout="this.style.background='rgba(29,158,117,0.08)'">💾 Guardar plantilla</button>
+                <button onclick="cargarPlantilla()" id="btn-cargar-plantilla" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid #2a3d30;border-radius:5px;padding:3px 6px;font-family:'Inter',sans-serif;font-size:9px;font-weight:600;color:#a8c4b0;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">📂 Cargar plantilla</button>
+              </div>
+
+              <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:var(--bg2);position:sticky;top:0;z-index:1;">
+                  <th style="font-size:8px;font-weight:600;color:#a8c4b0;text-transform:uppercase;padding:3px 4px;text-align:left;border-bottom:1px solid var(--border);width:28px;">#</th>
+                  <th style="font-size:8px;font-weight:600;color:#a8c4b0;text-transform:uppercase;padding:3px 4px;text-align:left;border-bottom:1px solid var(--border);">Jugador</th>
+                </tr></thead>
+                <tbody id="lineup-tbody">
+                  <tr><td colspan="2" style="font-size:10px;color:#6a9a7a;text-align:center;padding:10px 0;">Selecciona una formación</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- BOTÓN FIJO ABAJO -->
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 12px 10px;background:var(--bg);">
+            <button class="btn-empezar" onclick="empezarAnalisis()">▶ Empezar análisis</button>
+          </div>
+
+        </div>
+
+        <!-- ESTADO 1: Esperando inicio partido -->
+        <div id="etiq-wait-inicio" style="display:none;flex-direction:column;flex:1;min-height:0;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 24px;gap:0;">
+
+            <!-- PASO 1 -->
+            <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:400px;margin-bottom:6px;">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 14px rgba(29,158,117,0.45);">
+                <svg width="18" height="13" viewBox="0 0 18 13" fill="none"><path d="M1 6.5L7 12L17 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="flex:1;padding:8px 14px;border-radius:8px;background:rgba(29,158,117,0.07);border:1px solid rgba(29,158,117,0.2);">
+                <div style="font-size:10px;font-weight:600;color:var(--green-light);letter-spacing:0.3px;" id="wait-video-status">✓ Vídeo cargado</div>
+                <div style="font-size:9px;color:#6a9a7a;margin-top:1px;">El vídeo está listo para reproducirse</div>
+              </div>
+            </div>
+
+            <!-- FLECHA ↓ más blanca -->
+            <div style="margin:3px 0;color:rgba(255,255,255,0.25);font-size:16px;text-align:center;line-height:1;">↓</div>
+
+            <!-- PASO 2 -->
+            <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:400px;margin-bottom:6px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(29,158,117,0.15);border:1.5px solid var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:arrowPulse 1.1s ease-in-out infinite 0.2s;box-shadow:0 0 10px rgba(29,158,117,0.25);">
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                  <path d="M4 9 L14 9 M14 9 L9 4 M14 9 L9 14" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div style="flex:1;padding:8px 14px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid #1e2d24;">
+                <div style="font-size:10px;font-weight:600;color:#a8c4b0;letter-spacing:0.3px;margin-bottom:3px;">🎬 Busca el inicio del partido</div>
+                <div style="font-size:11px;color:#a8c4b0;line-height:1.45;">Reproduce el vídeo y sitúalo en el <strong style="color:#a8c4b0;">pitido inicial del árbitro</strong>. Pulsa <strong style="color:#c8ddd0;">▶ Play</strong> y cuando arranque el partido pulsa el botón de abajo.</div>
+              </div>
+            </div>
+
+            <!-- FLECHA ↓ más blanca -->
+            <div style="margin:3px 0;color:rgba(255,255,255,0.25);font-size:16px;text-align:center;line-height:1;">↓</div>
+
+            <!-- PASO 3: cronómetro pequeño centrado + botón principal -->
+            <div style="display:flex;align-items:center;gap:10px;width:100%;max-width:400px;">
+              <!-- cronómetro pequeño, centrado en el botón -->
+              <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:whistlePulse 0.9s ease-in-out infinite;opacity:0.7;">
+                <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
+                  <rect x="17" y="2" width="6" height="4" rx="2" fill="#6b7280" stroke="#4b5563" stroke-width="0.5"/>
+                  <rect x="30" y="9.5" width="4.5" height="2.5" rx="1.2" fill="#6b7280" stroke="#4b5563" stroke-width="0.4" transform="rotate(35 32 11)"/>
+                  <circle cx="20" cy="24" r="14" fill="#1c2420" stroke="#374151" stroke-width="1.5"/>
+                  <circle cx="20" cy="24" r="12.2" fill="none" stroke="#2d3a35" stroke-width="0.8"/>
+                  <circle cx="20" cy="24" r="11" fill="#0e1210"/>
+                  <line x1="20" y1="14" x2="20" y2="16.5" stroke="#4b5563" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="20" y1="31.5" x2="20" y2="34" stroke="#4b5563" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="10" y1="24" x2="12.5" y2="24" stroke="#4b5563" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="27.5" y1="24" x2="30" y2="24" stroke="#4b5563" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="20" y1="24" x2="17.2" y2="15.5" stroke="#e5e7eb" stroke-width="1.6" stroke-linecap="round"/>
+                  <line x1="20" y1="24" x2="26.5" y2="19.5" stroke="#1D9E75" stroke-width="1.1" stroke-linecap="round"/>
+                  <line x1="20" y1="24" x2="17.5" y2="26" stroke="#1D9E75" stroke-width="1.1" stroke-linecap="round"/>
+                  <circle cx="20" cy="24" r="2" fill="#4b5563"/>
+                  <circle cx="20" cy="24" r="0.9" fill="#e5e7eb"/>
+                </svg>
+              </div>
+              <div style="flex:1;">
+                <!-- botón principal más redondeado -->
+                <button class="wait-btn-inicio" id="btn-obligatorio" onclick="tagObligatorio()" style="width:100%;margin:0;border-radius:100px;">
+                  <span id="btn-oblig-label">▶ Marcar inicio de partido</span>
+                </button>
+                <!-- subtítulo más visible -->
+                <div style="font-size:10px;color:rgba(255,255,255,0.45);text-align:center;margin-top:6px;font-weight:500;">⏱ Arranca el cronómetro · inicia el análisis</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Activo -->
+        <div id="etiq-active" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+
+          <!-- ZONA JUGADAS + JUGADORES — flex:1 pero con min-height:0 -->
+          <div style="flex:1;min-height:0;display:flex;overflow:hidden;border-bottom:1px solid var(--border);">
+
+            <!-- IZQ: Jugadas — 52% -->
+            <div style="width:52%;flex-shrink:0;padding:6px 8px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
+
+              <!-- A FAVOR -->
+              <div style="font-size:8px;font-weight:700;color:#5DCAA5;letter-spacing:0.8px;text-transform:uppercase;">▶ A favor</div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                  <button class="ev-sq pase-sq"    data-tipo="pase-bueno"   onclick="selEvSq(this)">↗ Pase</button>
+                  <button class="ev-sq pase-sq"    data-tipo="pase-peligro" onclick="selEvSq(this)">🔑 Pase peligroso</button>
+                  <button class="ev-sq perdida-sq" data-tipo="perdida"      onclick="selEvSq(this)">↩ Pérdida</button>
+                  <button class="ev-sq tiro-sq"    data-tipo="recuperacion" onclick="selEvSq(this)">↩ Recuperación</button>
+                </div>
+                <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                  <button class="ev-sq tirof-sq"   data-tipo="tiro-fuera"   onclick="selEvSq(this)">↗ Tiro fuera</button>
+                  <button class="ev-sq tiro-sq"    data-tipo="tiro-puerta"  onclick="selEvSq(this)">🎯 Tiro a puerta</button>
+                  <button class="ev-sq gol-sq"     data-tipo="gol"          onclick="selEvSq(this)">⚽ Gol</button>
+                </div>
+                <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                  <button class="ev-sq falta-sq"   data-tipo="falta"        onclick="selEvSq(this)">⚠ Falta recibida</button>
+                  <button class="ev-sq falta-sq"   data-tipo="falta-peligro" onclick="selEvSq(this)">🔴 Falta peligrosa</button>
+                  <button class="ev-sq amarilla-sq" data-tipo="amarilla"    onclick="selEvSq(this)">🟨 T. Amarilla</button>
+                  <button class="ev-sq roja-sq"    data-tipo="roja"         onclick="selEvSq(this)">🟥 T. Roja</button>
+                </div>
+                <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                  <button class="ev-sq tirof-sq"   data-tipo="corner-favor" onclick="selEvSq(this)">🚩 Corner a favor</button>
+                  <button class="ev-sq offside-sq" data-tipo="offside"      onclick="selEvSq(this)">🚩 Fuera de juego</button>
+                </div>
+              </div>
+
+              <!-- separador -->
+              <div style="border-top:1px solid rgba(255,255,255,0.1);margin:1px 0;"></div>
+
+              <!-- EN CONTRA -->
+              <div style="font-size:8px;font-weight:700;color:#f87171;letter-spacing:0.8px;text-transform:uppercase;">◀ En contra</div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                  <button class="ev-sq pase-sq"    data-tipo="pase-contra"       data-contra="true" onclick="selEvSq(this)">🔑 Pase peligroso rival</button>
+                  <button class="ev-sq tiro-sq"    data-tipo="tiro-contra"       data-contra="true" onclick="selEvSq(this)">🎯 Tiro a puerta rival</button>
+                </div>
+                <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                  <button class="ev-sq tirof-sq"   data-tipo="tiro-contra-fuera" data-contra="true" onclick="selEvSq(this)">↗ Tiro fuera rival</button>
+                  <button class="ev-sq roja-sq"    data-tipo="gol-contra"        data-contra="true" onclick="selEvSq(this)">⚽ Gol recibido</button>
+                  <button class="ev-sq falta-sq"   data-tipo="falta-contra"      data-contra="true" onclick="selEvSq(this)">⚠ Falta cometida</button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- DER: Jugadores — 3 columnas: 6 titulares | 5 titulares | suplentes -->
+            <div id="jugadores-wrap" style="flex:1;padding:6px 8px;display:flex;gap:4px;overflow:hidden;min-height:0;transition:opacity 0.2s;">
+
+              <!-- col 1: jugadores 1-6 -->
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+                <div style="font-size:7px;font-weight:600;color:#a8c4b0;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px;">Titulares</div>
+                <div style="display:flex;flex-direction:column;gap:2px;" id="jugadores-col1"></div>
+              </div>
+
+              <!-- col 2: jugadores 7-11 -->
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+                <div style="font-size:7px;font-weight:600;color:transparent;margin-bottom:2px;">·</div>
+                <div style="display:flex;flex-direction:column;gap:2px;" id="jugadores-col2"></div>
+              </div>
+
+              <!-- divisor -->
+              <div style="width:2px;background:rgba(255,255,255,0.18);border-radius:1px;flex-shrink:0;margin:14px 0 0;"></div>
+
+              <!-- col 3: suplentes — más estrecha y compacta -->
+              <div style="width:80px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;overflow:hidden;">
+                <div style="font-size:7px;font-weight:600;color:#a8c4b0;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px;">Sup.</div>
+                <div style="display:flex;flex-direction:column;gap:2px;" id="jugadores-col3"></div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- TIMELINE — siempre visible, nunca aplastado -->
+          <div class="pitch-timeline" id="pitch-timeline" style="flex-shrink:0;">
+            <div class="ptl-top">
+              <span class="ptl-clock" id="ptl-clock">00:00</span>
+              <!-- MARCADOR CENTRAL -->
+              <div id="score-board" style="display:flex;align-items:center;gap:6px;background:#0a1a10;border:1px solid rgba(29,158,117,0.25);border-radius:6px;padding:3px 8px;">
+                <span id="score-local-name"  style="font-size:8px;color:#a8c4b0;max-width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Local</span>
+                <span id="score-local"       style="font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;min-width:12px;text-align:center;">0</span>
+                <span style="font-size:11px;color:#8aaa96;font-weight:300;">—</span>
+                <span id="score-visitante"   style="font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;min-width:12px;text-align:center;">0</span>
+                <span id="score-visit-name"  style="font-size:8px;color:#a8c4b0;max-width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Visitante</span>
+              </div>
+              <div class="ptl-status">
+                <div class="ptl-dot" id="ptl-dot"></div>
+                <span class="ptl-lbl" id="ptl-lbl">—</span>
+              </div>
+            </div>
+            <div class="ptl-bar-wrap">
+              <div class="ptl-events-layer" id="ptl-events-layer"></div>
+              <div class="ptl-track"><div class="ptl-fill" id="ptl-fill"></div></div>
+              <div class="ptl-cursor" id="ptl-cursor" style="left:0%;">
+                <div class="ptl-cursor-icon">
+                  <svg width="9" height="9" viewBox="0 0 18 18" fill="none">
+                    <circle cx="9" cy="9" r="2.2" fill="white"/>
+                    <circle cx="9" cy="2.5" r="1.4" fill="white" opacity="0.9"/>
+                    <circle cx="9" cy="15.5" r="1.4" fill="white" opacity="0.9"/>
+                    <circle cx="2.5" cy="9" r="1.4" fill="white" opacity="0.9"/>
+                    <circle cx="15.5" cy="9" r="1.4" fill="white" opacity="0.9"/>
+                  </svg>
+                </div>
+              </div>
+              <div id="ptl-req-markers"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BARRA FINAL: Reiniciar + Registrar -->
+        <div class="partido-final-bar" id="partido-final-bar" style="display:none;">
+          <button class="btn-reiniciar" onclick="reiniciarEtiquetado()">↺ Reiniciar</button>
+          <button class="btn-registrar" id="btn-registrar" onclick="registrarPartido()">✓ Registrar partido</button>
+        </div>
+
+      </div><!-- /etiq-body -->
+    </div><!-- /panel etiquetado -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-hdr-dot"></div>
+        <span class="panel-hdr-title">Eventos registrados</span>
+        <span id="eventos-count" style="font-size:9px;color:#a8c4b0;margin-left:4px;"></span>
+        <div class="step">4</div>
+      </div>
+      <div class="eventos-table-wrap">
+        <div id="eventos-empty" class="panel-empty"><span class="panel-empty-txt">Sin eventos aún</span></div>
+        <table class="eventos-table hidden" id="eventos-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>ID</th>
+              <th>Min</th>
+              <th>Evento</th>
+              <th>Jugador</th>
+              <th>X</th>
+              <th>Y</th>
+            </tr>
+          </thead>
+          <tbody id="eventos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3 CAMPO -->
+    <div class="panel" id="pitch-panel">
+      <div class="panel-hdr">
+        <div class="panel-hdr-dot"></div>
+        <span class="panel-hdr-title">Campograma</span>
+        <div class="step">3</div>
+      </div>
+      <div class="pitch-wrap">
+        <div class="pitch-side pitch-side-left">
+          <div class="side-label">Estado</div>
+          <div class="side-status" id="side-status">Selecciona una posición en el campo</div>
+        </div>
+        <div class="pitch-center">
+          <svg class="pitch-svg" id="pitch-svg" viewBox="0 0 670 448" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+            <rect width="670" height="448" fill="#145a2e"/>
+            <rect x="0"   y="0"   width="83"  height="448" fill="#176333"/>
+            <rect x="167" y="0"   width="83"  height="448" fill="#176333"/>
+            <rect x="335" y="0"   width="83"  height="448" fill="#176333"/>
+            <rect x="502" y="0"   width="83"  height="448" fill="#176333"/>
+            <rect x="20" y="20" width="630" height="408" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2"/>
+            <line x1="335" y1="20" x2="335" y2="428" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <circle cx="335" cy="224" r="55" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <circle cx="335" cy="224" r="3" fill="rgba(255,255,255,0.85)"/>
+            <rect x="5"   y="202" width="15" height="44"  fill="none" stroke="rgba(255,255,255,0.6)"  stroke-width="2"/>
+            <rect x="20"  y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <rect x="20"  y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <circle cx="86" cy="224" r="3" fill="rgba(255,255,255,0.85)"/>
+            <path d="M119,180 A55,55 0 0,1 119,268" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <rect x="650" y="202" width="15" height="44"  fill="none" stroke="rgba(255,255,255,0.6)"  stroke-width="2"/>
+            <rect x="617" y="169" width="33" height="110" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <rect x="551" y="103" width="99" height="242" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <circle cx="584" cy="224" r="3" fill="rgba(255,255,255,0.85)"/>
+            <path d="M551,180 A55,55 0 0,0 551,268" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <path d="M20,32   A12,12 0 0,1 32,20"   fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <path d="M638,20  A12,12 0 0,1 650,32"  fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <path d="M20,416  A12,12 0 0,0 32,428"  fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <path d="M638,428 A12,12 0 0,0 650,416" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+            <rect id="click-zone" x="20" y="20" width="630" height="408" fill="transparent" style="cursor:crosshair;" onclick="pitchClick(event)"/>
+            <g id="pitch-dots"></g>
+          </svg>
+        </div>
+        <div class="pitch-side pitch-side-right">
+          <div class="side-label">Selección</div>
+          <div class="sel-block">
+            <div class="sel-row">
+              <span class="sel-key">Jugada</span>
+              <span class="sel-val" id="sel-tipo">—</span>
+            </div>
+            <div class="sel-row">
+              <span class="sel-key">Jugador</span>
+              <span class="sel-val" id="sel-jugador">—</span>
+            </div>
+            <div class="sel-row sel-coords" id="sel-coords-row" style="display:none;">
+              <span class="sel-key">Coords</span>
+              <span class="sel-val" id="sel-coords-val">—</span>
+            </div>
+          </div>
+          <button class="btn-tag-side" id="btn-tag-side" onclick="tryTag()">TAG <span class="plus">+</span></button>
+        </div>
+      </div>
+
+      <div class="confirm-toast hidden" id="confirm-toast">✓ Evento confirmado</div>
+      <div class="req-alert hidden" id="req-alert">
+        <div class="req-alert-icon">🔴</div>
+        <div class="req-alert-title" id="req-alert-title">Tag obligatorio</div>
+        <div class="req-alert-msg" id="req-alert-msg"></div>
+      </div>
+      <div class="popup-overlay hidden" id="popup">
+        <div class="popup">
+          <div class="popup-icon">⚠️</div>
+          <div class="popup-title">Faltan datos</div>
+          <div class="popup-msg" id="popup-msg"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── YouTube IFrame API ──────────────────────────────────────────────
+var ytPlayer = null, ytReady = false;
+
+window.onYouTubeIframeAPIReady = function(){ ytReady = true; };
+
+(function(){
+  if(window.YT && window.YT.Player){ ytReady = true; return; }
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
+})();
+
+function createYTPlayer(videoId){
+  document.getElementById('video-wrap').innerHTML = '<div id="yt-pc" style="width:100%;height:100%;"></div>';
+  const tryBuild = () => {
+    if(window.YT && window.YT.Player){ ytReady = true; _buildPlayer(videoId); }
+    else { setTimeout(tryBuild, 150); }
+  };
+  tryBuild();
+}
+
+function _buildPlayer(videoId){
+  ytPlayer = new YT.Player('yt-pc',{
+    videoId,
+    playerVars:{
+      rel:0,
+      modestbranding:1,
+      enablejsapi:1,
+      disablekb:0,
+      iv_load_policy:3,
+      fs:0,
+      playsinline:1,
+      color:'white',
+      controls:1,
+      origin: window.location.origin
+    },
+    events:{ onReady: onPlayerReady, onStateChange: onPlayerStateChange }
+  });
+}
+
+// ── Estado partido ──────────────────────────────────────────────────
+const REQUIRED = [
+  { label:'Inicio de partido',  chipId:'req-inicio'  },
+  { label:'Final 1ª parte',     chipId:'req-fin1'    },
+  { label:'Inicio 2ª parte',    chipId:'req-inicio2' },
+  { label:'Final de partido',   chipId:'req-fin'     },
+];
+let reqDone = [false,false,false,false];
+let matchStartSec = null;   // segundo del vídeo al hacer inicio partido
+let videoDuration = 0;
+let tlInterval = null;
+
+function nextReqIdx(){ return reqDone.indexOf(false); }
+
+function empezarAnalisis(){
+  // ── 1. Vídeo obligatorio ──
+  if(!ytPlayer){
+    showModalAlert('🎬 Sin vídeo','Carga un vídeo de YouTube antes de empezar.', 'danger');
+    return;
+  }
+
+  // ── 2. Datos del partido obligatorios ──
+  const local    = document.getElementById('fi-local').value.trim();
+  const visitante= document.getElementById('fi-visitante').value.trim();
+  const jornada  = document.getElementById('fi-jornada').value;
+  const fecha    = document.getElementById('fi-fecha').value;
+  const formacion= document.getElementById('fi-formacion-local').value;
+  const rolLocal = document.getElementById('rol-local')?.checked;
+  const rolVisit = document.getElementById('rol-visitante')?.checked;
+  const missing  = [];
+  if(!local)     missing.push('Equipo local');
+  if(!visitante) missing.push('Equipo visitante');
+  if(!jornada)   missing.push('Jornada');
+  if(!fecha)     missing.push('Fecha');
+  if(!formacion) missing.push('Formación');
+  if(!rolLocal && !rolVisit) missing.push('Local o Visitante');
+  if(missing.length){
+    showModalAlert('📋 Faltan datos del partido','Completa: <strong>'+missing.join(', ')+'</strong>');
+    return;
+  }
+
+  // ── 3. Contar jugadores titulares con nombre ──
+  let titularesConNombre = 0;
+  if(formacion && FORMATIONS[formacion]){
+    FORMATIONS[formacion].forEach((_,i) => {
+      const name = document.getElementById(`tname-${i}`)?.value.trim();
+      if(name) titularesConNombre++;
+    });
+  }
+
+  // ── 4. Bloqueante: menos de 7 titulares ──
+  if(formacion && titularesConNombre < 7){
+    showModalAlert('⚠️ Pocos jugadores','Necesitas al menos <strong>7 jugadores titulares</strong> con nombre para empezar. Tienes '+titularesConNombre+'.');
+    return;
+  }
+
+  // ── 5. Contar suplentes con nombre ──
+  let suplentesConNombre = 0;
+  for(let s=0; s<5; s++){
+    const name = document.getElementById(`tname-${11+s}`)?.value.trim();
+    if(name) suplentesConNombre++;
+  }
+
+  // ── 6. Avisos no bloqueantes ──
+  const warnings = [];
+  if(formacion && titularesConNombre < 11){
+    warnings.push(`Solo tienes <strong>${titularesConNombre} de 11</strong> titulares con nombre.`);
+  }
+  if(!formacion){
+    warnings.push('No has seleccionado <strong>formación</strong>.');
+  }
+
+  if(warnings.length){
+    showModalConfirm(
+      '⚠️ Datos incompletos',
+      warnings.join('<br>') + '<br><br>¿Continuar de todos modos?',
+      '⚠️',
+      () => _doEmpezar()
+    );
+    return;
+  }
+
+  _doEmpezar();
+}
+
+function _doEmpezar(){
+  document.getElementById('etiq-form').style.display = 'none';
+  const w = document.getElementById('etiq-wait-inicio');
+  w.style.display = 'flex';
+  if(ytPlayer){ document.getElementById('wait-video-status').innerHTML='<span style="color:var(--green-light);">✓ Vídeo cargado</span>'; }
+  // Mostrar info partido en topbar
+  _updateTopbarMatchInfo();
+}
+
+function _updateTopbarMatchInfo(){
+  const local    = document.getElementById('fi-local')?.value.trim() || '?';
+  const visitante= document.getElementById('fi-visitante')?.value.trim() || '?';
+  const jornada  = document.getElementById('fi-jornada')?.value || '';
+  const fecha    = document.getElementById('fi-fecha')?.value || '';
+  const rol      = document.getElementById('rol-visitante')?.checked ? 'Visitante' : 'Local';
+  const info     = document.getElementById('topbar-match-info');
+  if(!info) return;
+  document.getElementById('tmi-equipos').textContent = `${local} vs ${visitante}`;
+  const parts = [];
+  if(jornada) parts.push(`J${jornada}`);
+  if(fecha)   parts.push(new Date(fecha).toLocaleDateString('es-ES',{day:'numeric',month:'short'}));
+  parts.push(`(${rol})`);
+  document.getElementById('tmi-meta').textContent = parts.join(' · ');
+  info.style.display = 'flex';
+}
+
+// ── Formaciones ────────────────────────────────────────────────────────
+const FORMATIONS = {
+  // div 100x133, campo x=2..78 (76px), y=2..131 (129px), suplentes x>80
+  // posiciones en % del div (left%, top%)
+  '4-4-2':    [[40,93],[10,72],[27,72],[53,72],[70,72],[10,50],[27,50],[53,50],[70,50],[27,12],[53,12]],
+  '4-3-3':    [[40,93],[10,72],[27,72],[53,72],[70,72],[20,50],[40,44],[60,50],[18,12],[40,8],[62,12]],
+  '4-2-3-1':  [[40,93],[10,72],[27,72],[53,72],[70,72],[28,58],[52,58],[14,38],[40,34],[66,38],[40,10]],
+  '4-1-4-1':  [[40,93],[10,72],[27,72],[53,72],[70,72],[40,60],[10,44],[27,44],[53,44],[70,44],[40,10]],
+  '4-5-1':    [[40,93],[10,72],[27,72],[53,72],[70,72],[5,48],[20,48],[40,44],[60,48],[75,48],[40,10]],
+  '3-5-2':    [[40,93],[20,74],[40,70],[60,74],[5,50],[22,50],[40,46],[58,50],[75,50],[28,12],[52,12]],
+  '3-4-3':    [[40,93],[20,74],[40,70],[60,74],[14,50],[32,50],[48,50],[66,50],[18,12],[40,8],[62,12]],
+  '5-3-2':    [[40,93],[5,72],[20,72],[40,70],[60,72],[75,72],[20,48],[40,44],[60,48],[28,12],[52,12]],
+  '5-4-1':    [[40,93],[5,72],[20,72],[40,70],[60,72],[75,72],[10,48],[27,48],[53,48],[70,48],[40,10]],
+  '4-3-2-1':  [[40,93],[10,72],[27,72],[53,72],[70,72],[20,56],[40,52],[60,56],[28,34],[52,34],[40,10]],
+  '4-4-1-1':  [[40,93],[10,72],[27,72],[53,72],[70,72],[10,50],[27,50],[53,50],[70,50],[40,28],[40,10]],
+  '3-6-1':    [[40,93],[20,74],[40,70],[60,74],[5,50],[18,50],[32,50],[48,50],[62,50],[75,50],[40,10]],
+};
+
+function renderFormation(){
+  const val = document.getElementById('fi-formacion-local').value;
+  const layer = document.getElementById('fp-players-local');
+  const tbody = document.getElementById('lineup-tbody');
+  if(!layer) return;
+  layer.innerHTML = '';
+  if(tbody) tbody.innerHTML = '';
+
+  if(!val || !FORMATIONS[val]){
+    if(tbody) tbody.innerHTML = '<tr><td colspan="2" style="font-size:10px;color:#6a9a7a;text-align:center;padding:10px 0;">Selecciona una formación</td></tr>';
+    return;
+  }
+
+  // 11 titulares
+  FORMATIONS[val].forEach((pos, i) => {
+    const div = document.createElement('div');
+    div.className = 'fp-player';
+    div.style.left = pos[0] + '%';
+    div.style.top = pos[1] + '%';
+    div.innerHTML = `
+      <input class="fp-num-input" id="fpnum-${i}" value="${i+1}" oninput="syncFromPitch(${i})" maxlength="2" style="width:20px;height:20px;background:var(--green);border:none;border-radius:3px;font-size:8px;font-weight:700;color:#fff;text-align:center;font-family:'Inter',sans-serif;outline:none;cursor:text;padding:0;"/>
+      <div id="fpname-label-${i}" style="font-size:6px;color:rgba(255,255,255,0.8);text-align:center;max-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;pointer-events:none;"></div>
+      <input class="fp-name-input" id="fpname-${i}" placeholder="Nombre" oninput="syncFromPitch(${i})" style="position:absolute;top:22px;left:50%;transform:translateX(-50%);width:52px;max-width:52px;opacity:0;pointer-events:none;"/>
+    `;
+    layer.appendChild(div);
+
+    if(tbody){
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid rgba(30,45,36,0.4)';
+      tr.innerHTML = `
+        <td style="padding:2px 3px;">
+          <input id="tnum-${i}" value="${i+1}" maxlength="2" oninput="syncFromTable(${i})"
+            style="width:22px;height:18px;background:var(--green);border:none;border-radius:3px;font-size:8px;font-weight:700;color:#fff;text-align:center;font-family:'Inter',sans-serif;outline:none;padding:0;"/>
+        </td>
+        <td style="padding:2px 3px;">
+          <input id="tname-${i}" placeholder="Nombre" oninput="syncFromTable(${i})"
+            style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:#c8ddd0;font-family:'Inter',sans-serif;font-size:10px;outline:none;padding:1px 2px;"/>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+
+  // Separador suplentes tabla
+  if(tbody){
+    const sep = document.createElement('tr');
+    sep.innerHTML = `<td colspan="2" style="padding:4px 4px 2px;font-size:8px;font-weight:600;color:#6a9a7a;text-transform:uppercase;letter-spacing:0.5px;border-top:1px solid var(--border);">Suplentes</td>`;
+    tbody.appendChild(sep);
+
+    for(let s=0; s<9; s++){
+      const idx = 11 + s;
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid rgba(30,45,36,0.3)';
+      tr.innerHTML = `
+        <td style="padding:2px 3px;">
+          <input id="tnum-${idx}" value="" placeholder="—" maxlength="2"
+            style="width:22px;height:18px;background:#1a2d20;border:1px solid #2a3d30;border-radius:3px;font-size:8px;font-weight:700;color:#a8c4b0;text-align:center;font-family:'Inter',sans-serif;outline:none;padding:0;cursor:text;"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='#2a3d30'"/>
+        </td>
+        <td style="padding:2px 3px;">
+          <input id="tname-${idx}" placeholder="Suplente ${s+1}"
+            oninput="updateSupList()"
+            style="width:100%;background:transparent;border:none;border-bottom:1px solid rgba(30,45,36,0.5);color:#a8c4b0;font-family:'Inter',sans-serif;font-size:10px;outline:none;padding:1px 2px;"/>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // Zona suplentes en el campo (lateral derecho)
+  updateSupList();
+}
+
+function syncFromPitch(i){
+  const num = document.getElementById(`fpnum-${i}`)?.value || '';
+  const name = document.getElementById(`fpname-${i}`)?.value || '';
+  const tn = document.getElementById(`tnum-${i}`); if(tn) tn.value = num;
+  const tname = document.getElementById(`tname-${i}`); if(tname) tname.value = name;
+  const lbl = document.getElementById(`fpname-label-${i}`); if(lbl) lbl.textContent = name;
+}
+
+function syncFromTable(i){
+  const num = document.getElementById(`tnum-${i}`)?.value || '';
+  const name = document.getElementById(`tname-${i}`)?.value || '';
+  const pn = document.getElementById(`fpnum-${i}`); if(pn) pn.value = num;
+  const pname = document.getElementById(`fpname-${i}`); if(pname) pname.value = name;
+  const lbl = document.getElementById(`fpname-label-${i}`); if(lbl) lbl.textContent = name;
+}
+
+function updateSupList(){
+  const layer = document.getElementById('fp-players-local');
+  if(!layer) return;
+  // Remove old sup elements
+  layer.querySelectorAll('.fp-sup').forEach(e=>e.remove());
+  // Add suplentes in SUP zone (x=81..98, stacked vertically)
+  for(let s=0; s<9; s++){
+    const idx = 11+s;
+    const numEl = document.getElementById(`tnum-${idx}`);
+    const nameEl = document.getElementById(`tname-${idx}`);
+    if(!nameEl) continue;
+    const name = nameEl.value.trim();
+    const num = numEl?.value?.trim() || '—';
+    if(!name) continue;
+    const sup = document.createElement('div');
+    sup.className = 'fp-sup';
+    sup.style.cssText = `position:absolute;left:82%;top:${4 + s*10}%;font-size:6px;color:rgba(255,255,255,0.7);font-family:Inter,sans-serif;line-height:1.2;white-space:nowrap;`;
+    sup.innerHTML = `<span style="background:#1a2d20;color:#5DCAA5;border-radius:2px;padding:0 2px;font-weight:700;font-size:6px;">${num}</span> <span>${name}</span>`;
+    layer.appendChild(sup);
+  }
+}
+
+function onPlayerReady(){
+  videoDuration = ytPlayer.getDuration() || 0;
+  const s = document.getElementById('wait-video-status');
+  if(s){ s.innerHTML='<span style="color:var(--green-light);">✓ Vídeo cargado</span>'; }
+}
+
+function onPlayerStateChange(){
+  if(!matchStartSec) return;
+  updatePTLStatus();
+}
+
+function updatePTLStatus(){
+  if(!ytPlayer) return;
+  const state = ytPlayer.getPlayerState();
+  const dot = document.getElementById('ptl-dot');
+  const lbl = document.getElementById('ptl-lbl');
+  if(!dot||!lbl) return;
+  if(state === YT.PlayerState.PLAYING){
+    dot.className='ptl-dot live'; lbl.className='ptl-lbl live'; lbl.textContent='En curso';
+    const fill=document.getElementById('ptl-fill'); if(fill) fill.classList.remove('paused');
+  } else if(state === YT.PlayerState.PAUSED){
+    dot.className='ptl-dot paused-dot'; lbl.className='ptl-lbl paused-lbl'; lbl.textContent='Pausado';
+    const fill=document.getElementById('ptl-fill'); if(fill) fill.classList.add('paused');
+  } else {
+    dot.className='ptl-dot'; lbl.className='ptl-lbl'; lbl.textContent='—';
+  }
+}
+
+function startTimeline(){
+  videoDuration = ytPlayer ? (ytPlayer.getDuration() || 0) : 0;
+  document.getElementById('etiq-wait-inicio').style.display = 'none';
+  const el = document.getElementById('etiq-active');
+  el.style.display = 'flex'; el.style.flex = '1'; el.style.minHeight = '0';
+  const pt = document.getElementById('pitch-timeline');
+  if(pt) pt.style.display = 'block';
+  const guiaHdr = document.getElementById('guia-hdr');
+  if(guiaHdr) guiaHdr.style.display = 'flex';
+  initJugadores();
+  initScoreNames();
+  updatePTLStatus();
+  updateReqChips();
+  if(tlInterval) clearInterval(tlInterval);
+  tlInterval = setInterval(tickTL, 500);
+}
+
+function tickTL(){
+  if(!ytPlayer || matchStartSec === null) return;
+  const cur = ytPlayer.getCurrentTime();
+  const elapsed = Math.max(0, cur - matchStartSec);
+  const mins = String(Math.floor(elapsed/60)).padStart(2,'0');
+  const secs = String(Math.floor(elapsed%60)).padStart(2,'0');
+  const clock = document.getElementById('ptl-clock');
+  if(clock){
+    clock.textContent = `${mins}:${secs}`;
+    const state = ytPlayer.getPlayerState();
+    clock.className = 'ptl-clock' + (state === YT.PlayerState.PAUSED ? ' paused' : '');
+  }
+  if(videoDuration > 0){
+    const pct = Math.min(100,(cur/videoDuration)*100);
+    const fill = document.getElementById('ptl-fill');
+    const cursor = document.getElementById('ptl-cursor');
+    if(fill) fill.style.width = pct + '%';
+    if(cursor) cursor.style.left = pct + '%';
+  }
+  updatePTLStatus();
+}
+
+function addTLMarker(sec){
+  if(videoDuration <= 0) return;
+  const pct = (sec / videoDuration) * 100;
+  const wrap = document.getElementById('ptl-req-markers');
+  if(!wrap) return;
+  const m = document.createElement('div');
+  m.className = 'ptl-req-marker';
+  m.style.left = pct + '%';
+  wrap.appendChild(m);
+}
+
+function tagObligatorio(){
+  const idx = nextReqIdx();
+  if(idx === -1) return;
+  if(!ytPlayer){ showReqAlert('Sin vídeo','Carga un vídeo primero.'); return; }
+
+  const sec = ytPlayer.getCurrentTime();
+  reqDone[idx] = true;
+
+  if(idx === 0){
+    matchStartSec = sec;
+    addEventoToTable({min:'00:00',tipo:'inicio-partido',jugador:'—',x:'—',y:'—',sec,obligatorio:true});
+    startTimeline();
+    return;
+  }
+
+  updateReqChips();
+  addTLMarker(sec);
+  const minStr = getMinStr(sec);
+  addEventoToTable({min:minStr,tipo:REQUIRED[idx].label,jugador:'—',x:'—',y:'—',sec,obligatorio:true});
+
+  const next = nextReqIdx();
+  if(next === -1){
+    // Partido finalizado
+    const fb = document.getElementById('partido-final-bar');
+    if(fb) fb.style.display = 'flex';
+    if(tlInterval){ clearInterval(tlInterval); tlInterval = null; }
+  }
+  showToast(`✓ ${REQUIRED[idx].label} registrado`);
+}
+
+function getMinStr(sec){
+  if(matchStartSec === null) return '—';
+  const elapsed = Math.max(0, sec - matchStartSec);
+  return `${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(Math.floor(elapsed%60)).padStart(2,'0')}`;
+}
+
+let esContra = false;
+
+function selEvSq(btn){
+  const tipo = btn.dataset.tipo;
+  const contra = btn.dataset.contra === 'true';
+  document.querySelectorAll('.ev-sq').forEach(b=>b.classList.remove('sel-sq'));
+  document.querySelectorAll('.ev-pill').forEach(b=>b.classList.remove('selected'));
+  if(selectedEvento === tipo){
+    selectedEvento = null; mockAttribs.tipo = null; esContra = false;
+    _showJugadores(true);
+  } else {
+    selectedEvento = tipo;
+    btn.classList.add('sel-sq');
+    document.querySelectorAll('.ev-pill').forEach(b=>{ if(b.dataset.tipo===tipo) b.classList.add('selected'); });
+    mockAttribs.tipo = tipoLabel(tipo);
+    esContra = contra;
+    _showJugadores(!contra);
+    if(contra){
+      selectedJugador = null; mockAttribs.jugador = null;
+      document.querySelectorAll('.jug-pill').forEach(p=>p.classList.remove('selected'));
+    }
+  }
+  updateSideRight(); updateGuia();
+}
+
+function _showJugadores(show){
+  const wrap = document.getElementById('jugadores-wrap');
+  if(wrap){
+    wrap.style.opacity = show ? '1' : '0.2';
+    wrap.style.pointerEvents = show ? 'auto' : 'none';
+  }
+}
+
+function updateReqChips(){
+  const next = nextReqIdx();
+  REQUIRED.forEach((r,i) => {
+    const chip = document.getElementById(r.chipId);
+    if(!chip) return;
+    if(reqDone[i]){
+      chip.className = 'req-chip done';
+      chip.disabled = true;
+    } else if(i === next){
+      chip.className = 'req-chip next';
+      chip.disabled = false;
+    } else {
+      chip.className = 'req-chip pending';
+      chip.disabled = true;
+    }
+  });
+}
+
+function addTLMarker(sec){
+  if(videoDuration <= 0) return;
+  const pct = (sec / videoDuration) * 100;
+  const wrap = document.getElementById('ptl-req-markers');
+  if(!wrap) return;
+  const m = document.createElement('div');
+  m.className = 'ptl-req-marker';
+  m.style.left = pct + '%';
+  wrap.appendChild(m);
+}
+
+function showReqAlert(title, msg){
+  // Show as red overlay on pitch panel (like before)
+  const a = document.getElementById('req-alert');
+  if(a){
+    document.getElementById('req-alert-title').textContent = title;
+    document.getElementById('req-alert-msg').textContent = msg;
+    a.classList.remove('hidden');
+    setTimeout(() => a.classList.add('hidden'), 2500);
+  } else {
+    showModalAlert('🔴 ' + title, msg);
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('confirm-toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2200);
+}
+
+// ── Vídeo ────────────────────────────────────────────────────────────
+function extractYTId(url){
+  const m = url.match(/(?:v=|\/embed\/|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function loadVideo(){
+  const url = document.getElementById('yt-url').value.trim();
+  if(!url) return;
+  const ytId = extractYTId(url);
+  if(!ytId){
+    document.getElementById('video-wrap').innerHTML = `<div class="vid-ph" style="padding:16px;text-align:center;"><p style="color:#f87171;font-size:12px;font-weight:600;margin-bottom:6px;">URL no reconocida</p><p style="color:#8aaa96;font-size:11px;line-height:1.6;">Comprueba que la URL es de YouTube y que el vídeo es <strong style="color:#c8ddd0;">público u oculto</strong> — los vídeos privados no se pueden cargar.</p></div>`;
+    return;
+  }
+  // Deshabilitar botón — ya no se puede volver a cargar
+  const playBtn = document.querySelector('.btn-play');
+  if(playBtn){ playBtn.disabled = true; playBtn.style.opacity = '0.3'; playBtn.style.cursor = 'not-allowed'; }
+  const urlInp = document.getElementById('yt-url');
+  if(urlInp){ urlInp.disabled = true; urlInp.style.opacity = '0.5'; }
+  // Reset estado
+  reqDone = [false,false,false,false];
+  matchStartSec = null;
+  isConfirming = false;
+  if(tlInterval){ clearInterval(tlInterval); tlInterval = null; }
+  const act = document.getElementById('etiq-active'); act.style.display = 'none';
+  const waitStatus = document.getElementById('wait-video-status');
+  if(waitStatus){ waitStatus.textContent = 'Cargando...'; waitStatus.style.color = ''; }
+  const ptlReq = document.getElementById('ptl-req-markers'); if(ptlReq) ptlReq.innerHTML = '';
+  const ptlEv = document.getElementById('ptl-events-layer'); if(ptlEv) ptlEv.innerHTML = '';
+  const ptlFill = document.getElementById('ptl-fill'); if(ptlFill) ptlFill.style.width = '0%';
+  const ptlCursor = document.getElementById('ptl-cursor'); if(ptlCursor) ptlCursor.style.left = '0%';
+  updateReqChips();
+  createYTPlayer(ytId);
+}
+
+// ── Campo ────────────────────────────────────────────────────────────
+const F = {x0:20,y0:20,w:630,h:408};
+let pendingCoords = null, mockAttribs = {tipo:null, jugador:null};
+
+function svgToNorm(sx,sy){return{x:Math.max(0,Math.min(100,Math.round(((sx-F.x0)/F.w)*100))),y:Math.max(0,Math.min(100,Math.round((1-(sy-F.y0)/F.h)*100)))};}
+function normToSvg(nx,ny){return{svgX:F.x0+(nx/100)*F.w,svgY:F.y0+(1-ny/100)*F.h};}
+function mkEl(tag,attrs){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;}
+
+function updateSideRight(){
+  const t=document.getElementById('sel-tipo'), j=document.getElementById('sel-jugador');
+  const cr=document.getElementById('sel-coords-row'), cv=document.getElementById('sel-coords-val');
+  if(mockAttribs.tipo){t.textContent=mockAttribs.tipo;t.classList.add('has-val');}else{t.textContent='—';t.classList.remove('has-val');}
+  if(mockAttribs.jugador){j.textContent=mockAttribs.jugador;j.classList.add('has-val');}else{j.textContent='—';j.classList.remove('has-val');}
+  if(pendingCoords){cr.style.display='flex';cv.textContent=`X ${pendingCoords.x} · Y ${pendingCoords.y}`;}else{cr.style.display='none';}
+}
+
+function pitchClick(e){
+  if(!reqDone[0]){ showReqAlert('Inicio requerido','Etiqueta primero el inicio de partido.'); return; }
+  if(reqDone[1] && !reqDone[2]){ showReqAlert('Descanso','Estás en el descanso. Espera al inicio de la 2ª parte.'); return; }
+  if(reqDone[3]){ showReqAlert('Partido finalizado','El partido ya ha finalizado.'); return; }
+  const svg=document.getElementById('pitch-svg');
+  const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+  const sx=(e.clientX-r.left)*(vb.width/r.width), sy=(e.clientY-r.top)*(vb.height/r.height);
+  const{x,y}=svgToNorm(sx,sy); pendingCoords={x,y};
+  drawDot(x,y,'pending');
+  const st=document.getElementById('side-status');
+  st.className='side-status active'; st.textContent='Posición seleccionada';
+  updateSideRight();
+  updateGuia();
+}
+
+function drawDot(nx,ny,state){
+  const{svgX,svgY}=normToSvg(nx,ny);
+  document.getElementById('dot-active')?.remove();
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.id='dot-active';
+  const p=state==='pending', fc=p?'#d97706':'#1D9E75', sc=p?'#d97706':'#5DCAA5';
+  g.appendChild(mkEl('circle',{cx:svgX,cy:svgY,r:12,fill:fc,'fill-opacity':'0.18',stroke:sc,'stroke-width':'1.5'}));
+  g.appendChild(mkEl('circle',{cx:svgX,cy:svgY,r:4,fill:fc}));
+  const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t.setAttribute('x',svgX); t.setAttribute('y',svgY-14); t.setAttribute('text-anchor','middle');
+  t.setAttribute('font-size','8'); t.setAttribute('fill',p?'#d97706':'#5DCAA5');
+  t.setAttribute('font-family','Inter'); t.setAttribute('font-weight','600');
+  t.textContent=p?`${nx},${ny}`:'✓';
+  g.appendChild(t); document.getElementById('pitch-dots').appendChild(g);
+}
+
+function tryTag(){
+  if(isConfirming) return;
+  if(!reqDone[0]){ showReqAlert('Inicio requerido','Etiqueta primero el inicio de partido.'); return; }
+  if(reqDone[1] && !reqDone[2]){ showReqAlert('Descanso','Estás en el descanso. Espera al inicio de la 2ª parte.'); return; }
+  if(reqDone[3]){ showReqAlert('Partido finalizado','El partido ya ha finalizado.'); return; }
+  const missing=[];
+  if(!selectedEvento) missing.push('jugada');
+  if(!selectedJugador && !esContra) missing.push('jugador');
+  // Comprobar expulsado
+  if(selectedJugador && expulsados.has(selectedJugador)){
+    showReqAlert('Jugador expulsado', `${selectedJugador} está expulsado y no puede participar.`);
+    return;
+  }
+  if(!pendingCoords) missing.push('posición en el campo');
+  if(missing.length){
+    showReqAlert('Faltan datos', 'Completa: ' + missing.join(', '));
+    return;
+  }
+  isConfirming = true;
+  confirmTag();
+}
+
+function confirmTag(){
+  const minStr = (ytPlayer && matchStartSec !== null) ? getMinStr(ytPlayer.getCurrentTime()) : '—';
+
+  addEventoToTable({
+    min: minStr,
+    tipo: selectedEvento,
+    jugador: esContra ? '— Rival' : (selectedJugador || '—'),
+    x: pendingCoords.x,
+    y: pendingCoords.y,
+    sec: ytPlayer ? ytPlayer.getCurrentTime() : 0
+  });
+
+  // añadir pin en barra de tiempo (solo gol y amarilla)
+  if(ytPlayer) addEventPin(ytPlayer.getCurrentTime(), selectedEvento, eventoIdCounter - 1);
+  // actualizar marcador si es gol
+  if(selectedEvento === 'gol') updateScore('nos');
+  if(selectedEvento === 'gol-contra'){
+    updateScore('rival');
+  }
+  // Lógica de tarjetas
+  if(selectedEvento === 'amarilla' && selectedJugador){
+    yellowCards[selectedJugador] = (yellowCards[selectedJugador] || 0) + 1;
+    if(yellowCards[selectedJugador] >= 2){
+      // Segunda amarilla → roja automática
+      expulsados.add(selectedJugador);
+      setTimeout(()=>{
+        addEventoToTable({
+          min: minStr, tipo: 'roja', jugador: selectedJugador,
+          x: pendingCoords?.x || '—', y: pendingCoords?.y || '—',
+          sec: ytPlayer ? ytPlayer.getCurrentTime() : 0
+        });
+        if(ytPlayer) addEventPin(ytPlayer.getCurrentTime(), 'roja', eventoIdCounter - 1);
+        showToast('🟥 ' + selectedJugador + ' — 2ª amarilla → EXPULSADO');
+      }, 300);
+    }
+  }
+  if(selectedEvento === 'roja' && selectedJugador){
+    expulsados.add(selectedJugador);
+    showToast('🟥 ' + selectedJugador + ' — EXPULSADO');
+  }
+
+  drawDot(pendingCoords.x,pendingCoords.y,'confirmed');
+  const st=document.getElementById('side-status');
+  st.className='side-status confirmed'; st.textContent='✓ Confirmado';
+  showToast('✓ Evento confirmado');
+
+  setTimeout(()=>{
+    isConfirming = false; esContra = false;
+    pendingCoords=null;
+    selectedEvento=null; selectedJugador=null;
+    mockAttribs.tipo=null; mockAttribs.jugador=null;
+    _showJugadores(true);
+    document.querySelectorAll('.ev-pill').forEach(p=>p.classList.remove('selected'));
+    document.querySelectorAll('.ev-sq').forEach(p=>p.classList.remove('sel-sq'));
+    document.querySelectorAll('.jug-pill').forEach(p=>p.classList.remove('selected'));
+    st.className='side-status'; st.textContent='Selecciona una posición en el campo';
+    document.getElementById('dot-active')?.remove();
+    updateSideRight();
+    updateGuia();
+  },2000);
+}
+
+// ── Jugadores ─────────────────────────────────────────────────────────
+const JUGADORES = [
+  'Portero 1','Defensa 2','Defensa 3','Defensa 4','Defensa 5',
+  'Medio 6','Medio 7','Medio 8','Delantero 9','Delantero 10','Delantero 11'
+];
+
+let selectedJugador = null;
+
+function initJugadores(){
+  const col1 = document.getElementById('jugadores-col1');
+  const col2 = document.getElementById('jugadores-col2');
+  const col3 = document.getElementById('jugadores-col3');
+  if(!col1) return;
+  col1.innerHTML=''; col2.innerHTML=''; if(col3) col3.innerHTML='';
+
+  const formacion = document.getElementById('fi-formacion-local')?.value;
+  let titulares = [];
+  if(formacion && FORMATIONS[formacion]){
+    FORMATIONS[formacion].forEach((_,i) => {
+      const num  = document.getElementById(`tnum-${i}`)?.value?.trim()  || String(i+1);
+      const name = document.getElementById(`tname-${i}`)?.value?.trim() || '';
+      // Solo añadir si tiene nombre, o si el número fue editado (diferente al por defecto)
+      if(name){
+        titulares.push({num, name, label: `${num}. ${name}`});
+      }
+    });
+  }
+  // Si no hay formación o nadie con nombre, fallback numérico 1-11
+  if(titulares.length === 0){
+    for(let i=1;i<=11;i++) titulares.push({num:String(i),name:'',label:String(i)});
+  }
+
+  // Primeros 6 → col1, últimos 5 → col2
+  titulares.forEach((j, idx) => {
+    const btn = makePill(j);
+    if(idx < 6) col1.appendChild(btn);
+    else col2.appendChild(btn);
+  });
+
+  // Suplentes → col3 (píldoras más pequeñas)
+  if(col3){
+    for(let s=0;s<9;s++){
+      const idx=11+s;
+      const num = document.getElementById(`tnum-${idx}`)?.value?.trim() || '';
+      const name= document.getElementById(`tname-${idx}`)?.value?.trim() || '';
+      if(!name && !num) continue;
+      const j = {num: num||'S', name, label: name ? `${num||'S'}. ${name}` : (num||`S${s+1}`)};
+      const btn = makePill(j, true); // true = suplente (small)
+      col3.appendChild(btn);
+    }
+    if(col3.children.length === 0){
+      col3.innerHTML = '<div style="font-size:8px;color:#8aaa96;padding:2px 0;">—</div>';
+    }
+  }
+}
+
+function makePill(j, small){
+  const btn = document.createElement('button');
+  btn.className = 'jug-pill';
+  btn.dataset.label = j.label;
+  const circleSize = small ? '13px' : '17px';
+  const fontSize = small ? '6px' : '7px';
+  const textSize = small ? '8px' : '10px';
+  btn.innerHTML = `<span class="jug-num" style="width:${circleSize};height:${circleSize};border-radius:50%;background:transparent;border:1.5px solid rgba(255,255,255,0.5);display:inline-flex;align-items:center;justify-content:center;font-size:${fontSize};font-weight:700;color:#fff;flex-shrink:0;transition:all 0.12s;">${j.num}</span><span style="font-size:${textSize};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.name || j.num}</span>`;
+  btn.onclick = () => selectJugador(j.label, btn);
+  return btn;
+}
+
+function selectJugador(nombre, el){
+  if(selectedJugador === nombre){
+    selectedJugador = null;
+    document.querySelectorAll('.jug-pill').forEach(p => p.classList.remove('selected'));
+  } else {
+    selectedJugador = nombre;
+    document.querySelectorAll('.jug-pill').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  mockAttribs.jugador = selectedJugador;
+  updateSideRight();
+  updateGuia();
+}
+// ── Eventos registrados ────────────────────────────────────────────────
+let eventosData = [];
+let eventoIdCounter = 1;
+let isConfirming = false;
+let rolEquipo = 'local';
+let scoreLocal = 0, scoreVisitante = 0;
+const yellowCards = {}; // jugador → nº amarillas acumuladas
+const expulsados = new Set(); // jugadores expulsados (no pueden actuar)
+
+function updateRol(){
+  rolEquipo = document.getElementById('rol-visitante')?.checked ? 'visitante' : 'local';
+  // visual feedback
+  const lblL = document.getElementById('lbl-local');
+  const lblV = document.getElementById('lbl-visitante');
+  const dotL = document.getElementById('dot-local');
+  const dotV = document.getElementById('dot-visitante');
+  if(rolEquipo === 'local'){
+    if(lblL){ lblL.style.borderColor='var(--green)'; lblL.style.background='rgba(29,158,117,0.08)'; }
+    if(lblV){ lblV.style.borderColor='#2a3d30'; lblV.style.background='#0a0e0c'; }
+    if(dotL){ dotL.style.background='var(--green)'; dotL.style.borderColor='var(--green)'; }
+    if(dotV){ dotV.style.background='transparent'; dotV.style.borderColor='#5a7a66'; }
+  } else {
+    if(lblV){ lblV.style.borderColor='var(--green)'; lblV.style.background='rgba(29,158,117,0.08)'; }
+    if(lblL){ lblL.style.borderColor='#2a3d30'; lblL.style.background='#0a0e0c'; }
+    if(dotV){ dotV.style.background='var(--green)'; dotV.style.borderColor='var(--green)'; }
+    if(dotL){ dotL.style.background='transparent'; dotL.style.borderColor='#5a7a66'; }
+  }
+}
+
+// Bind radio clicks via labels
+document.addEventListener('click', function(e){
+  const lbl = e.target.closest('#lbl-local, #lbl-visitante');
+  if(!lbl) return;
+  const isLocal = lbl.id === 'lbl-local';
+  document.getElementById('rol-local').checked = isLocal;
+  document.getElementById('rol-visitante').checked = !isLocal;
+  updateRol();
+});
+
+function updateScore(whoScored){
+  // whoScored: 'nos' (nosotros) o 'rival'
+  if(whoScored === 'nos'){
+    if(rolEquipo === 'local') scoreLocal++;
+    else scoreVisitante++;
+  } else {
+    if(rolEquipo === 'local') scoreVisitante++;
+    else scoreLocal++;
+  }
+  const sl = document.getElementById('score-local'); if(sl) sl.textContent = scoreLocal;
+  const sv = document.getElementById('score-visitante'); if(sv) sv.textContent = scoreVisitante;
+  const sb = document.getElementById('score-board');
+  const isOurs = whoScored === 'nos';
+  if(sb){
+    sb.style.borderColor = isOurs ? 'rgba(29,158,117,0.8)' : 'rgba(239,68,68,0.6)';
+    sb.style.boxShadow   = isOurs ? '0 0 16px rgba(29,158,117,0.4)' : '0 0 14px rgba(239,68,68,0.3)';
+    setTimeout(()=>{sb.style.borderColor='rgba(29,158,117,0.25)';sb.style.boxShadow='none';},800);
+  }
+}
+
+function initScoreNames(){
+  const local = document.getElementById('fi-local')?.value.trim() || 'Local';
+  const visit = document.getElementById('fi-visitante')?.value.trim() || 'Visitante';
+  const ln = document.getElementById('score-local-name'); if(ln) ln.textContent = local;
+  const vn = document.getElementById('score-visit-name'); if(vn) vn.textContent = visit;
+  document.getElementById('score-local').textContent = '0';
+  document.getElementById('score-visitante').textContent = '0';
+}
+
+function addEventoToTable(evento){
+  evento.id = eventoIdCounter++;
+  eventosData.push(evento);
+  renderTabla();
+}
+
+function addEventPin(sec, tipo, id){
+  const pinTypes = ['gol','amarilla','roja'];
+  if(!pinTypes.includes(tipo)) return;
+  if(videoDuration <= 0) return;
+  const pct = (sec / videoDuration) * 100;
+  const layer = document.getElementById('ptl-events-layer');
+  if(!layer) return;
+  const icon = tipo==='gol' ? '⚽' : tipo==='roja' ? '🟥' : '🟨';
+  const color = tipo==='amarilla' ? '#fde047' : tipo==='roja' ? '#f87171' : 'rgba(255,255,255,0.8)';
+  const existing = Array.from(layer.querySelectorAll('.ptl-ev-pin'));
+  const nearby = existing.filter(p => Math.abs(parseFloat(p.style.left) - pct) < 3);
+  const lineExtra = Math.min(nearby.length * 6, 8);
+  const pin = document.createElement('div');
+  pin.className = 'ptl-ev-pin';
+  pin.style.left = pct + '%';
+  pin.style.color = color;
+  pin.dataset.id = id;
+  pin.innerHTML = `<span class="ptl-ev-icon">${icon}</span><div class="ptl-ev-line" style="height:${18 + lineExtra}px"></div>`;
+  layer.appendChild(pin);
+}
+
+function eliminarEvento(id){
+  eventosData = eventosData.filter(e => e.id !== id);
+  // borrar pin de la barra si existe
+  const pin = document.querySelector(`#ptl-events-layer [data-id="${id}"]`);
+  if(pin) pin.remove();
+  renderTabla();
+}
+
+function renderTabla(){
+  const tbody = document.getElementById('eventos-tbody');
+  const empty = document.getElementById('eventos-empty');
+  const table = document.getElementById('eventos-table');
+  const count = document.getElementById('eventos-count');
+  tbody.innerHTML = '';
+  if(eventosData.length === 0){
+    empty.classList.remove('hidden'); table.classList.add('hidden'); count.textContent = ''; return;
+  }
+  empty.classList.add('hidden'); table.classList.remove('hidden');
+  count.textContent = `(${eventosData.length})`;
+
+  const BADGE_MAP = {
+    'gol':            {cls:'gol',       label:'⚽ Gol'},
+    'tiro-puerta':    {cls:'tiro',      label:'🎯 Tiro a puerta'},
+    'tiro-fuera':     {cls:'tirof',     label:'↗ Tiro fuera'},
+    'amarilla':       {cls:'amarilla',  label:'🟨 T. Amarilla'},
+    'roja':           {cls:'roja',      label:'🟥 T. Roja'},
+    'recuperacion':   {cls:'tiro',      label:'↩ Recuperación'},
+    'corner-favor':   {cls:'tirof',     label:'🚩 Corner a favor'},
+    'falta':          {cls:'falta',     label:'⚠ Falta recibida'},
+    'falta-peligro':  {cls:'falta',     label:'🔴 Falta peligrosa'},
+    'falta-contra':   {cls:'falta',     label:'⚠ Falta cometida'},
+    'pase-clave':     {cls:'pase',      label:'🔑 Pase clave'},
+    'pase-bueno':     {cls:'pase',      label:'↗ Pase'},
+    'pase-peligro':   {cls:'pase',      label:'🔑 Pase peligroso'},
+    'perdida':        {cls:'perdida',   label:'↩ Pérdida'},
+    'ocasion':        {cls:'ocasion',   label:'🔥 Ocasión'},
+    'offside':        {cls:'offside',   label:'🚩 Fuera de juego'},
+    // en contra
+    'gol-contra':     {cls:'roja',      label:'⚽ Gol recibido'},
+    'tiro-contra':    {cls:'tiro',      label:'🎯 Tiro recibido'},
+    'tiro-contra-fuera':{cls:'tirof',   label:'↗ Tiro recibido fuera'},
+    'pase-contra':    {cls:'pase',      label:'🔑 Pase peligroso rival'},
+    'corner-contra':  {cls:'tirof',     label:'🚩 Corner en contra'},
+    'ocasion-contra': {cls:'ocasion',   label:'🔥 Ocasión rival'},
+  };
+
+  [...eventosData].reverse().forEach(ev => {
+    let badgeCls, badgeTxt;
+    if(ev.obligatorio){
+      badgeCls = 'obligatorio';
+      badgeTxt = ev.tipo;
+    } else {
+      const b = BADGE_MAP[ev.tipo];
+      badgeCls = b ? b.cls : 'falta';
+      badgeTxt = b ? b.label : tipoLabel(ev.tipo);
+    }
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-id', ev.id);
+    tr.innerHTML = `
+      <td class="ev-del-cell">${ev.obligatorio?'':'<button class="ev-del" onclick="eliminarEvento('+ev.id+')" title="Eliminar">✕</button>'}</td>
+      <td class="ev-id">#${ev.id}</td>
+      <td class="ev-min">${ev.min}</td>
+      <td><span class="ev-badge ${badgeCls}">${badgeTxt}</span></td>
+      <td style="color:#c8ddd0;font-size:10px;">${ev.jugador}</td>
+      <td class="ev-coords">${ev.x}</td>
+      <td class="ev-coords">${ev.y}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+let selectedEvento = null;
+
+function tipoLabel(tipo){
+  const map = {
+    'gol':             '⚽ Gol',
+    'tiro-puerta':     '🎯 Tiro a puerta',
+    'tiro-fuera':         '↗ Tiro fuera',
+    'amarilla':           '🟨 T. Amarilla',
+    'roja':               '🟥 T. Roja',
+    'recuperacion':       '↩ Recuperación',
+    'corner-favor':       '🚩 Corner a favor',
+    'falta':              '⚠ Falta recibida',
+    'falta-peligro':      '🔴 Falta peligrosa',
+    'falta-contra':       '⚠ Falta cometida',
+    'pase-bueno':         '↗ Pase',
+    'pase-peligro':       '🔑 Pase peligroso',
+    'pase-clave':         '🔑 Pase clave',
+    'perdida':            '↩ Pérdida',
+    'ocasion':            '🔥 Ocasión clara',
+    'offside':            '🚩 Fuera de juego',
+    'gol-contra':         '⚽ Gol recibido',
+    'tiro-contra':        '🎯 Tiro recibido a puerta',
+    'tiro-contra-fuera':  '↗ Tiro recibido fuera',
+    'pase-contra':        '🔑 Pase peligroso rival',
+    'corner-contra':      '🚩 Corner en contra',
+    'ocasion-contra':     '🔥 Ocasión rival',
+  };
+  return map[tipo] || tipo;
+}
+
+function updateGuia(){
+  const states = [
+    !!selectedEvento,
+    !!selectedJugador || esContra, // paso 2 se salta si es contra
+    !!pendingCoords,
+    false
+  ];
+  const firstActive = states.indexOf(false);
+  const active = firstActive === -1 ? 3 : firstActive;
+  [1,2,3,4].forEach((n,i) => {
+    const num = document.getElementById('g'+n);
+    const txt = document.getElementById('g'+n+'t');
+    if(!num||!txt) return;
+    if(states[i]){ num.className='guia-num done'; txt.className='guia-txt-hdr done'; }
+    else if(i===active){ num.className='guia-num active'; txt.className='guia-txt-hdr active'; }
+    else { num.className='guia-num pending'; txt.className='guia-txt-hdr pending'; }
+  });
+}
+
+// ── Modals ────────────────────────────────────────────────────────────
+function showModalAlert(title, msg, type){
+  document.getElementById('modal-alert-title').textContent = title;
+  document.getElementById('modal-alert-msg').innerHTML = msg;
+  const box = document.querySelector('#modal-alert-overlay .modal-box');
+  if(type === 'danger'){
+    box.style.borderColor = 'rgba(239,68,68,0.5)';
+    box.style.background = '#130a0a';
+  } else {
+    box.style.borderColor = '';
+    box.style.background = '';
+  }
+  document.getElementById('modal-alert-overlay').classList.remove('hidden');
+}
+function closeModalAlert(){ document.getElementById('modal-alert-overlay').classList.add('hidden'); }
+
+function showModalConfirm(title, msg, icon, onOk){
+  document.getElementById('modal-confirm-title').textContent = title;
+  document.getElementById('modal-confirm-msg').innerHTML = msg;
+  document.getElementById('modal-confirm-icon').textContent = icon;
+  document.getElementById('modal-confirm-overlay').classList.remove('hidden');
+  document.getElementById('modal-confirm-ok').onclick = () => { closeModalConfirm(); onOk(); };
+}
+function closeModalConfirm(){ document.getElementById('modal-confirm-overlay').classList.add('hidden'); }
+
+function reiniciarEtiquetado(){
+  showModalConfirm(
+    '↺ Reiniciar etiquetado',
+    'Se borrarán <strong>todos los eventos</strong> y volverás al inicio. ¿Continuar?',
+    '🔄',
+    () => {
+      eventosData=[]; eventoIdCounter=1; isConfirming=false; esContra=false;
+      scoreLocal=0; scoreVisitante=0;
+      Object.keys(yellowCards).forEach(k=>delete yellowCards[k]);
+      expulsados.clear();
+      reqDone=[false,false,false,false]; matchStartSec=null;
+      selectedEvento=null; selectedJugador=null; pendingCoords=null;
+      mockAttribs={tipo:null,jugador:null};
+      if(tlInterval){clearInterval(tlInterval);tlInterval=null;}
+      document.getElementById('etiq-active').style.display='none';
+      document.getElementById('partido-final-bar').style.display='none';
+      const guiaHdr=document.getElementById('guia-hdr'); if(guiaHdr) guiaHdr.style.display='none';
+      document.getElementById('etiq-wait-inicio').style.display='flex';
+      ['ptl-fill','ptl-cursor'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.width=e.style.left='0%';}});
+      ['ptl-events-layer','ptl-req-markers'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});
+      const clk=document.getElementById('ptl-clock'); if(clk) clk.textContent='00:00';
+      document.querySelectorAll('.ev-pill,.jug-pill,.ev-sq').forEach(p=>p.classList.remove('selected','sel-sq'));
+      document.getElementById('dot-active')?.remove();
+      document.getElementById('pitch-dots').innerHTML='';
+      if(ytPlayer){ document.getElementById('wait-video-status').innerHTML='<span style="color:var(--green-light);">✓ Vídeo cargado</span>'; }
+      // re-habilitar carga de vídeo
+      const playBtn = document.querySelector('.btn-play');
+      if(playBtn){ playBtn.disabled=false; playBtn.style.opacity=''; playBtn.style.cursor=''; }
+      const urlInp = document.getElementById('yt-url');
+      if(urlInp){ urlInp.disabled=false; urlInp.style.opacity=''; urlInp.value=''; }
+      const info = document.getElementById('topbar-match-info'); if(info) info.style.display='none';
+      updateReqChips(); renderTabla(); updateGuia();
+    }
+  );
+}
+
+function registrarPartido(){
+  const local    = document.getElementById('fi-local')?.value?.trim() || 'Local';
+  const visitante= document.getElementById('fi-visitante')?.value?.trim() || 'Visitante';
+  const rolLocal = !(document.getElementById('rol-visitante')?.checked);
+  const nosotros = rolLocal ? local : visitante;
+  const rival    = rolLocal ? visitante : local;
+  const totalEvs = eventosData.filter(e=>!e.obligatorio).length;
+  const goles    = eventosData.filter(e=>e.tipo==='gol').length;
+  const tiros    = eventosData.filter(e=>e.tipo==='tiro-puerta').length;
+  const pases    = eventosData.filter(e=>e.tipo==='pase-peligro').length;
+  const recup    = eventosData.filter(e=>e.tipo==='recuperacion').length;
+
+  // Jugador más activo
+  const jugCount = {};
+  eventosData.filter(e=>!e.obligatorio&&e.jugador&&e.jugador!=='—').forEach(e=>{
+    jugCount[e.jugador]=(jugCount[e.jugador]||0)+1;
+  });
+  const topJug = Object.entries(jugCount).sort((a,b)=>b[1]-a[1])[0];
+
+  showModalConfirm(
+    '📊 Cerrar análisis',
+    `<div style="text-align:left;">
+      <div style="font-size:14px;font-weight:700;color:#c8ddd0;margin-bottom:12px;text-align:center;">${nosotros} <span style="color:#1D9E75;">${scoreLocal} — ${scoreVisitante}</span> ${rival}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">
+        <div style="background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.15);border-radius:7px;padding:8px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#1D9E75;">${totalEvs}</div>
+          <div style="font-size:9px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;">Acciones</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:7px;padding:8px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#c8ddd0;">${tiros}</div>
+          <div style="font-size:9px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;">Tiros a puerta</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:7px;padding:8px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#60a5fa;">${pases}</div>
+          <div style="font-size:9px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;">Pases peligrosos</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid #1e2d24;border-radius:7px;padding:8px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#5DCAA5;">${recup}</div>
+          <div style="font-size:9px;color:#a8c4b0;text-transform:uppercase;letter-spacing:0.5px;">Recuperaciones</div>
+        </div>
+      </div>
+      ${topJug ? `<div style="font-size:10px;color:#a8c4b0;text-align:center;margin-bottom:10px;">⭐ Más activo: <strong style="color:#c8ddd0;">${topJug[0]}</strong> (${topJug[1]} acciones)</div>` : ''}
+      <div style="font-size:10px;color:#f87171;text-align:center;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.15);border-radius:6px;padding:7px;">⚠ Acción definitiva — no podrás modificar el análisis</div>
+    </div>`,
+    '',
+    async () => {
+      const { usados, limite, restantes, plan } = await cargarContador();
+      if(restantes <= 0){
+        if(plan === 'trial'){
+          // Modal especial trial — muestra planes directamente
+          const modalTrial = document.createElement('div');
+          modalTrial.id = 'modal-trial-fin';
+          modalTrial.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+          modalTrial.innerHTML = `
+            <div onclick="event.stopPropagation()" style="background:#0e1210;border:1px solid #1e2d24;border-radius:16px;padding:28px 24px;max-width:380px;width:100%;font-family:'Inter',sans-serif;">
+              <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:32px;margin-bottom:10px;">⚽</div>
+                <div style="font-size:17px;font-weight:700;color:#e8f0ec;letter-spacing:-0.3px;">Tu partido de prueba ha acabado</div>
+                <div style="font-size:12px;color:#5a7a66;margin-top:6px;line-height:1.5;">Has completado el análisis gratuito.<br>Elige un plan para seguir analizando tus partidos.</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+                <div onclick="document.getElementById('modal-trial-fin').remove();irACheckout('entrenador')" style="background:#0a1109;border:1px solid #1e2d24;border-radius:10px;padding:12px 16px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(29,158,117,0.4)'" onmouseout="this.style.borderColor='#1e2d24'">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:13px;font-weight:700;color:#e8f0ec;">Entrenador</div>
+                    <div><span style="font-size:16px;font-weight:800;color:#1D9E75;">9€</span><span style="font-size:10px;color:#5a7a66;">/mes</span></div>
+                  </div>
+                  <div style="font-size:10px;color:#5a7a66;margin-top:3px;">3 partidos · 10 preguntas IA</div>
+                </div>
+                <div onclick="document.getElementById('modal-trial-fin').remove();irACheckout('analista')" style="background:#0F6E56;border:1.5px solid #1D9E75;border-radius:10px;padding:12px 16px;cursor:pointer;position:relative;transition:all 0.15s;" onmouseover="this.style.background='#1a5c48'" onmouseout="this.style.background='#0F6E56'">
+                  <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#1D9E75;color:white;font-size:9px;font-weight:700;padding:2px 10px;border-radius:99px;white-space:nowrap;">MÁS POPULAR</div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:13px;font-weight:700;color:#fff;">Analista</div>
+                    <div><span style="font-size:16px;font-weight:800;color:#fff;">12€</span><span style="font-size:10px;color:rgba(255,255,255,0.5);">/mes</span></div>
+                  </div>
+                  <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:3px;">5 partidos · 20 preguntas IA · historial temporada</div>
+                </div>
+                <div onclick="document.getElementById('modal-trial-fin').remove();irACheckout('elite')" style="background:#0a1109;border:1px solid #1e2d24;border-radius:10px;padding:12px 16px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(93,202,165,0.4)'" onmouseout="this.style.borderColor='#1e2d24'">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:13px;font-weight:700;color:#e8f0ec;">Élite</div>
+                    <div><span style="font-size:16px;font-weight:800;color:#5DCAA5;">15€</span><span style="font-size:10px;color:#5a7a66;">/mes</span></div>
+                  </div>
+                  <div style="font-size:10px;color:#5a7a66;margin-top:3px;">10 partidos · 30 preguntas IA · PDF export</div>
+                </div>
+              </div>
+              <button onclick="document.getElementById('modal-trial-fin').remove()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid #1e2d24;border-radius:8px;padding:9px;font-family:'Inter',sans-serif;font-size:11px;color:#5a7a66;cursor:pointer;">Ahora no</button>
+            </div>`;
+          document.body.appendChild(modalTrial);
+        } else {
+          const msg = `Has usado los ${limite} partidos de tu plan este mes.<br><br>Actualiza tu plan para continuar analizando.`;
+          showModalAlert('Límite alcanzado', msg);
+        }
+        return;
+      }
+      const partidoData = {
+        local, visitante,
+        jornada:   document.getElementById('fi-jornada')?.value || '',
+        fecha:     document.getElementById('fi-fecha')?.value || '',
+        rol:       document.getElementById('rol-visitante')?.checked ? 'Visitante' : 'Local',
+        formacion: document.getElementById('fi-formacion-local')?.value || '',
+        scoreLocal, scoreVisitante,
+        eventos:   eventosData,
+        registradoEn: new Date().toISOString()
+      };
+      localStorage.setItem('tactiq_ultimo_partido', JSON.stringify(partidoData));
+      const { error } = await registrarPartidoSupabase(partidoData);
+      if(error) console.error('Error guardando partido:', error);
+      window.location.href = 'postpartido.html';
+    }
+  );
+}
+
+// ── Plantilla ────────────────────────────────────────────────────────
+async function guardarPlantilla(){
+  const formacion = document.getElementById('fi-formacion-local')?.value;
+  if(!formacion){ showModalAlert('Sin formación','Selecciona una formación antes de guardar la plantilla.'); return; }
+  const jugadores = [];
+  for(let i=0;i<11;i++){
+    jugadores.push({
+      num:  document.getElementById(`tnum-${i}`)?.value?.trim() || String(i+1),
+      name: document.getElementById(`tname-${i}`)?.value?.trim() || ''
+    });
+  }
+  const suplentes = [];
+  for(let s=0;s<9;s++){
+    const idx=11+s;
+    suplentes.push({
+      num:  document.getElementById(`tnum-${idx}`)?.value?.trim() || '',
+      name: document.getElementById(`tname-${idx}`)?.value?.trim() || ''
+    });
+  }
+  const plantilla = { formacion, jugadores, suplentes, savedAt: new Date().toLocaleDateString('es-ES') };
+
+  // Guardar en localStorage como backup
+  try { localStorage.setItem('tactiq_plantilla', JSON.stringify(plantilla)); } catch(e){}
+
+  // Guardar en Supabase (upsert — crea o actualiza)
+  if(_currentUser){
+    const { error } = await sb.from('plantillas').upsert({
+      user_id:  _currentUser.id,
+      formacion: plantilla.formacion,
+      jugadores: plantilla
+    }, { onConflict: 'user_id' });
+    if(error){ console.error('Error guardando plantilla:', error); }
+  }
+
+  showToast('✓ Plantilla guardada — ' + formacion);
+  // Actualizar botón cargar
+  const btn = document.getElementById('btn-cargar-plantilla');
+  if(btn){ btn.style.borderColor='rgba(29,158,117,0.4)'; btn.style.color='var(--green-light)'; btn.textContent='📂 '+formacion+' ('+plantilla.savedAt+')'; }
+}
+
+async function cargarPlantilla(){
+  let plantillaData = null;
+
+  // Intentar cargar desde Supabase primero
+  if(_currentUser){
+    const { data } = await sb.from('plantillas').select('jugadores').eq('user_id', _currentUser.id).single();
+    if(data?.jugadores) plantillaData = data.jugadores;
+  }
+
+  // Fallback a localStorage
+  if(!plantillaData){
+    try {
+      const raw = localStorage.getItem('tactiq_plantilla');
+      if(raw) plantillaData = JSON.parse(raw);
+    } catch(e){}
+  }
+
+  if(!plantillaData){ showModalAlert('Sin plantilla','No hay ninguna plantilla guardada aún. Rellena la alineación y pulsa "Guardar plantilla".'); return; }
+
+  const p = plantillaData;
+  const sel = document.getElementById('fi-formacion-local');
+  if(sel){ sel.value = p.formacion; renderFormation(); }
+  setTimeout(() => {
+    p.jugadores?.forEach((j,i) => {
+      const numEl  = document.getElementById(`tnum-${i}`);
+      const nameEl = document.getElementById(`tname-${i}`);
+      const fpNum  = document.getElementById(`fpnum-${i}`);
+      const fpName = document.getElementById(`fpname-${i}`);
+      const lbl    = document.getElementById(`fpname-label-${i}`);
+      if(numEl)  numEl.value  = j.num;
+      if(nameEl) nameEl.value = j.name;
+      if(fpNum)  fpNum.value  = j.num;
+      if(fpName) fpName.value = j.name;
+      if(lbl)    lbl.textContent = j.name;
+    });
+    p.suplentes?.forEach((s,idx) => {
+      const numEl  = document.getElementById(`tnum-${11+idx}`);
+      const nameEl = document.getElementById(`tname-${11+idx}`);
+      if(numEl)  numEl.value  = s.num;
+      if(nameEl) nameEl.value = s.name;
+    });
+    showToast('✓ Plantilla cargada — ' + p.formacion + ' (' + (p.savedAt||'') + ')');
+  }, 80);
+}
+
+// La plantilla se carga desde Supabase al pulsar el botón cargar
+
+function toggleInstrucciones(){ document.getElementById('float-panel').classList.toggle('hidden'); }
+
+// event delegation para pastillas de evento (evita problema con SVG hijo)
+document.addEventListener('click',function(e){
+  // float panel cierre
+  const fp=document.getElementById('float-panel');
+  if(!fp.classList.contains('hidden')&&!e.target.closest('.btn-instrucciones')&&!e.target.closest('.float-panel'))
+    fp.classList.add('hidden');
+
+  // pastillas evento
+  const pill = e.target.closest('.ev-pill');
+  if(pill && pill.dataset.tipo){
+    const tipo = pill.dataset.tipo;
+    document.querySelectorAll('.ev-sq').forEach(b=>b.classList.remove('sel-sq'));
+    if(selectedEvento === tipo){
+      selectedEvento = null;
+      document.querySelectorAll('.ev-pill').forEach(p=>p.classList.remove('selected'));
+    } else {
+      selectedEvento = tipo;
+      document.querySelectorAll('.ev-pill').forEach(p=>p.classList.remove('selected'));
+      pill.classList.add('selected');
+      document.querySelectorAll('.ev-sq').forEach(b=>{ if(b.dataset.tipo===tipo) b.classList.add('sel-sq'); });
+    }
+    mockAttribs.tipo = selectedEvento ? tipoLabel(selectedEvento) : null;
+    updateSideRight();
+    updateGuia();
+  }
+});
+
+document.getElementById('yt-url').addEventListener('keydown',e=>{ if(e.key==='Enter') loadVideo(); });
+
+document.addEventListener('DOMContentLoaded', function(){
+  const f = document.getElementById('fi-fecha');
+  if(f) f.value = new Date().toISOString().split('T')[0];
+});
+// Fallback inmediato por si DOMContentLoaded ya pasó
+(function(){ const f=document.getElementById('fi-fecha'); if(f && !f.value) f.value=new Date().toISOString().split('T')[0]; })();
+
+// ── Supabase Auth + Partidos ──────────────────
+const SUPABASE_URL  = 'https://hqxkvmfdmukzgnomdsht.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxeGt2bWZkbXVremdub21kc2h0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTI4OTQsImV4cCI6MjA4OTQ4ODg5NH0.Jml68Ap2yjli7siNOvfISKqXPR6bzypvmDGAiGUSs6s';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let _currentUser = null;
+let _perfil = null;
+
+// Límites por plan
+const PLAN_LIMITES = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
+
+(async function initAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ window.location.href = 'index.html'; return; }
+
+  _currentUser = session.user;
+  const nombre = _currentUser.user_metadata?.nombre || _currentUser.email.split('@')[0];
+  const el = document.getElementById('user-display');
+  if(el) el.textContent = nombre;
+
+  // Ocultar loading screen con fade
+  const loadingEl = document.getElementById('tq-loading');
+  if(loadingEl){
+    loadingEl.classList.add('fade-out');
+    setTimeout(()=>{ loadingEl.style.display='none'; }, 400);
+  }
+
+  // Cargar perfil y contador de partidos
+  await cargarContador();
+
+  // Manejar vuelta desde Stripe
+  const params = new URLSearchParams(window.location.search);
+  const pago = params.get('pago');
+  if (pago === 'ok') {
+    // Limpiar la URL sin recargar
+    window.history.replaceState({}, '', '/app.html');
+    // Pequeño delay — el webhook puede necesitar 1-2s para actualizar el plan
+    setTimeout(async () => {
+      await cargarContador();
+      showModalAlert(
+        '¡Pago completado! ⚡',
+        'Tu plan ya está activo. Si el contador aún no se ha actualizado, espera unos segundos y recarga la página.'
+      );
+    }, 2000);
+  } else if (pago === 'cancelado') {
+    window.history.replaceState({}, '', '/app.html');
+    // No mostrar nada — el usuario canceló voluntariamente
+  }
+
+  // Tutorial primera vez — pequeño delay para que la UI esté lista
+  setTimeout(iniciarTutorialSiProcede, 800);
+})();
+
+async function cargarContador(){
+  let perfil = null;
+  try {
+    const { data, error } = await sb.from('perfiles').select('*').eq('id', _currentUser.id).single();
+    if(error) throw error;
+    perfil = data;
+  } catch(e) {
+    console.error('Error cargando perfil:', e);
+    const counter = document.getElementById('match-counter');
+    if(counter){ counter.textContent = 'Error de conexión'; counter.style.color = '#f87171'; }
+  }
+  _perfil = perfil;
+
+  const plan = perfil?.plan || 'entrenador';
+  const limite = PLAN_LIMITES[plan] ?? PLAN_LIMITES['entrenador'];
+
+  // Trial: contar todos los partidos sin ciclo
+  // Resto: ciclo de 30 días desde el registro
+  let usados, restantes;
+
+  if (plan === 'trial') {
+    const { count } = await sb.from('partidos')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', _currentUser.id);
+    usados = count || 0;
+    restantes = Math.max(0, limite - usados);
+  } else {
+    // Usar plan_renovado_en si existe (fecha de último pago/renovación Stripe)
+    // Si no existe, caer en created_at como antes
+    const baseRenovacion = perfil?.plan_renovado_en || perfil?.created_at || new Date().toISOString();
+    const fechaBase = new Date(baseRenovacion);
+    const ahora = new Date();
+    const ciclosCompletos = Math.floor((ahora - fechaBase) / (30*24*60*60*1000));
+    const inicioCiclo = new Date(fechaBase.getTime() + ciclosCompletos * 30*24*60*60*1000);
+
+    const { count } = await sb.from('partidos')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', _currentUser.id)
+      .gte('created_at', inicioCiclo.toISOString());
+    usados = count || 0;
+    restantes = Math.max(0, limite - usados);
+  }
+
+  // Actualizar topbar contador
+  const counter = document.getElementById('match-counter');
+  if(counter){
+    counter.textContent = `${usados} / ${limite} partidos`;
+    counter.style.color = restantes === 0 ? '#f87171' : restantes === 1 ? '#fcd34d' : '#8aaa96';
+  }
+
+  // Mostrar botón "Gestionar plan" solo si tiene suscripción de pago activa
+  const btnGestionar = document.getElementById('btn-gestionar-plan');
+  if(btnGestionar){
+    const tieneStripe = !!(perfil?.stripe_customer_id);
+    btnGestionar.style.display = (plan !== 'trial' && tieneStripe) ? 'block' : 'none';
+  }
+
+  return { usados, limite, restantes, plan };
+}
+
+// ── Registrar partido en Supabase ─────────────
+async function registrarPartidoSupabase(partidoData){
+  const { data, error } = await sb.from('partidos').insert({
+    user_id:         _currentUser.id,
+    local:           partidoData.local,
+    visitante:       partidoData.visitante,
+    jornada:         parseInt(partidoData.jornada) || null,
+    fecha:           partidoData.fecha || null,
+    rol:             partidoData.rol,
+    formacion:       partidoData.formacion,
+    score_local:     partidoData.scoreLocal,
+    score_visitante: partidoData.scoreVisitante,
+    eventos:         partidoData.eventos
+  }).select().single();
+  return { data, error };
+}
+
+// ── Historial de partidos ─────────────────────
+async function abrirHistorial(){
+  // Mostrar panel
+  const overlay = document.getElementById('historial-overlay');
+  const panel   = document.getElementById('historial-panel');
+  overlay.style.display = 'block';
+  panel.style.display = 'flex';
+  setTimeout(()=>{ panel.style.transform = 'translateX(0)'; }, 10);
+
+  // Cargar partidos de Supabase según plan
+  const plan = _perfil?.plan || 'entrenador';
+  const listEl = document.getElementById('historial-list');
+  const subtitleEl = document.getElementById('historial-subtitle');
+  listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#6a9a7a;font-size:11px;">Cargando...</div>';
+
+  try {
+    // Entrenador: solo ciclo actual (30 días). Analista/Élite: todos
+    let query = sb.from('partidos')
+      .select('id,local,visitante,jornada,fecha,rol,score_local,score_visitante,formacion,eventos,created_at')
+      .eq('user_id', _currentUser.id)
+      .order('created_at', { ascending: false });
+
+    // Trial y Entrenador: solo ciclo actual (30 días). Analista/Élite: todos
+    // Trial especial: ve todos sus partidos (máximo 1, pero que lo vea siempre)
+    if(plan === 'entrenador'){
+      const registro = new Date(_perfil?.created_at || Date.now());
+      const ciclosCompletos = Math.floor((Date.now() - registro) / (30*24*60*60*1000));
+      const inicioCiclo = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
+      query = query.gte('created_at', inicioCiclo.toISOString());
+    }
+    // trial, analista, elite: sin filtro de fecha → ven todos
+
+    const { data: partidos, error } = await query;
+    if(error) throw error;
+
+    if(!partidos || partidos.length === 0){
+      listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#6a9a7a;font-size:11px;">Aún no has registrado ningún partido.<br><br>Etiqueta tu primer partido y aparecerá aquí.</div>';
+      subtitleEl.textContent = '0 partidos';
+      return;
+    }
+
+    const planLabel = plan === 'entrenador' ? 'ciclo actual' : 'todos los partidos';
+    subtitleEl.textContent = `${partidos.length} partido${partidos.length===1?'':'s'} — ${planLabel}`;
+
+    listEl.innerHTML = '';
+    partidos.forEach(p => {
+      const nosotros = p.rol === 'Local' ? p.local : p.visitante;
+      const rival    = p.rol === 'Local' ? p.visitante : p.local;
+      const goles    = p.score_local ?? (p.eventos||[]).filter(e=>e.tipo==='gol').length;
+      const golesC   = p.score_visitante ?? (p.eventos||[]).filter(e=>e.tipo==='gol-contra').length;
+      const res      = goles > golesC ? 'V' : goles < golesC ? 'D' : 'E';
+      const resColor = res==='V'?'#1D9E75':res==='D'?'#f87171':'#fcd34d';
+      const fecha    = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) : '—';
+      const totalEvs = (p.eventos||[]).filter(e=>!e.obligatorio).length;
+
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#0e1210;border:1px solid #1e2d24;border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color 0.15s;';
+      card.onmouseover = ()=>{ card.style.borderColor='rgba(29,158,117,0.3)'; };
+      card.onmouseout  = ()=>{ card.style.borderColor='#1e2d24'; };
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${p.jornada?`<span style="font-size:8px;color:#a8c4b0;background:#1e2d24;padding:1px 6px;border-radius:10px;">J${p.jornada}</span>`:''}
+            <span style="font-size:8px;color:#a8c4b0;">${fecha}</span>
+          </div>
+          <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}18;border:1px solid ${resColor}30;padding:1px 8px;border-radius:10px;">${res==='V'?'Victoria':res==='D'?'Derrota':'Empate'}</span>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:3px;">${nosotros} <span style="color:${resColor};">${goles}–${golesC}</span> ${rival}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:9px;color:#6a9a7a;">${p.formacion||''} · ${totalEvs} acciones</span>
+          <span style="font-size:9px;color:#1D9E75;font-weight:600;">Ver análisis →</span>
+        </div>
+      `;
+      card.onclick = () => verPartidoHistorial(p);
+      listEl.appendChild(card);
+    });
+
+    // Aviso plan entrenador
+    if(plan === 'entrenador'){
+      const aviso = document.createElement('div');
+      aviso.style.cssText = 'text-align:center;padding:10px;font-size:9px;color:#8aaa96;border-top:1px solid #1e2d24;margin-top:4px;';
+      aviso.textContent = 'Plan Entrenador — partidos del ciclo actual · Actualiza para ver el historial completo';
+      listEl.appendChild(aviso);
+    }
+
+  } catch(e) {
+    listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171;font-size:11px;">Error cargando partidos.</div>';
+  }
+}
+
+function cerrarHistorial(){
+  const panel   = document.getElementById('historial-panel');
+  const overlay = document.getElementById('historial-overlay');
+  panel.style.transform = 'translateX(100%)';
+  setTimeout(()=>{ panel.style.display='none'; overlay.style.display='none'; }, 250);
+}
+
+function verPartidoHistorial(p){
+  // Cargar partido en localStorage y abrir postpartido
+  const partidoData = {
+    local: p.local, visitante: p.visitante,
+    jornada: p.jornada, fecha: p.fecha, rol: p.rol,
+    formacion: p.formacion,
+    scoreLocal: p.score_local, scoreVisitante: p.score_visitante,
+    eventos: p.eventos || [],
+    registradoEn: p.created_at
+  };
+  localStorage.setItem('tactiq_ultimo_partido', JSON.stringify(partidoData));
+  window.location.href = 'postpartido.html';
+}
+
+// ── Upgrade / Stripe Checkout ─────────────────
+function abrirUpgrade(){
+  document.getElementById('modal-upgrade-overlay').classList.remove('hidden');
+}
+function cerrarUpgrade(){
+  document.getElementById('modal-upgrade-overlay').classList.add('hidden');
+}
+
+async function irACheckout(plan){
+  const btn = document.getElementById('upgrade-btn-'+plan);
+  if(!btn) return;
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<div style="text-align:center;padding:8px;color:#5DCAA5;font-size:11px;font-weight:600;">⚽ Redirigiendo a pago seguro...</div>';
+  btn.style.pointerEvents = 'none';
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) throw new Error('Sin sesión');
+
+    const res = await fetch('/.netlify/functions/crear-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ plan })
+    });
+    const data = await res.json();
+    if(data.url){
+      window.location.href = data.url;
+    } else {
+      throw new Error(data.error || 'Error al crear sesión de pago');
+    }
+  } catch(e) {
+    btn.innerHTML = originalHTML;
+    btn.style.pointerEvents = '';
+    showModalAlert('Error', 'No se pudo iniciar el pago. Inténtalo de nuevo o escríbenos a soporte@tactiqfutbol.es');
+  }
+}
+
+// Resetear botones al volver con el botón atrás del navegador
+window.addEventListener('pageshow', function(e){
+  ['entrenador','analista','elite'].forEach(plan => {
+    const btn = document.getElementById('upgrade-btn-'+plan);
+    if(btn) btn.style.pointerEvents = '';
+  });
+});
+
+
+// ══════════════════════════════════════════════
+// TUTORIAL WALKTHROUGH — primera vez
+// ══════════════════════════════════════════════
+const TUTORIAL_STEPS = [
+  {
+    target: 'yt-url',
+    title: 'Paso 1 · Carga el vídeo',
+    text: 'Pega aquí la URL de YouTube del partido. El vídeo debe ser público u oculto — los privados no funcionan. Pulsa Enter o el botón de play.',
+    position: 'bottom'
+  },
+  {
+    target: 'etiq-panel',
+    title: 'Paso 2 · Rellena los datos del partido',
+    text: 'Introduce el nombre de los equipos, jornada, fecha y formación. Solo necesitas hacerlo una vez — la plantilla se guarda automáticamente.',
+    position: 'right'
+  },
+  {
+    target: 'match-counter',
+    title: 'Paso 3 · Tu contador de partidos',
+    text: 'Aquí ves cuántos partidos te quedan disponibles en tu plan este mes.',
+    position: 'bottom'
+  },
+  {
+    target: 'btn-gestionar-plan',
+    title: 'Paso 4 · Gestiona tu suscripción',
+    text: 'Desde aquí puedes cambiar de plan, actualizar tu tarjeta o cancelar cuando quieras.',
+    position: 'bottom',
+    skipIfHidden: true
+  }
+];
+
+let _tutorialStep = 0;
+let _tutorialOverlay = null;
+let _tutorialBox = null;
+
+async function iniciarTutorialSiProcede() {
+  if(!_currentUser) return;
+  // Verificar en Supabase si ya ha visto el tutorial
+  try {
+    const { data } = await sb.from('perfiles').select('tutorial_done').eq('id', _currentUser.id).single();
+    if(data?.tutorial_done) return; // ya lo vio
+    mostrarPasoTutorial(0);
+  } catch(e) {
+    // Si falla, no mostramos el tutorial — no interrumpimos la app
+  }
+}
+
+function mostrarPasoTutorial(step) {
+  // Limpiar paso anterior
+  limpiarTutorial();
+
+  const pasos = TUTORIAL_STEPS.filter(s => {
+    if(s.skipIfHidden) {
+      const el = document.getElementById(s.target);
+      return el && el.style.display !== 'none' && el.offsetParent !== null;
+    }
+    return true;
+  });
+
+  if(step >= pasos.length) {
+    finalizarTutorial();
+    return;
+  }
+
+  _tutorialStep = step;
+  const paso = pasos[step];
+  const target = document.getElementById(paso.target);
+  if(!target) { mostrarPasoTutorial(step + 1); return; }
+
+  const rect = target.getBoundingClientRect();
+
+  // Overlay semitransparente
+  _tutorialOverlay = document.createElement('div');
+  _tutorialOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9990;';
+  _tutorialOverlay.onclick = () => mostrarPasoTutorial(step + 1);
+  document.body.appendChild(_tutorialOverlay);
+
+  // Recorte iluminado del target
+  const highlight = document.createElement('div');
+  highlight.style.cssText = `position:fixed;z-index:9991;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,0.55),0 0 0 2px #1D9E75;pointer-events:none;transition:all 0.3s;left:${rect.left - 4}px;top:${rect.top - 4}px;width:${rect.width + 8}px;height:${rect.height + 8}px;`;
+  document.body.appendChild(highlight);
+  _tutorialOverlay._highlight = highlight;
+
+  // Caja del tooltip
+  _tutorialBox = document.createElement('div');
+  _tutorialBox.style.cssText = 'position:fixed;z-index:9992;background:#0e1210;border:1.5px solid #1D9E75;border-radius:10px;padding:16px 18px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6);font-family:Inter,sans-serif;';
+
+  // Posición del tooltip
+  const boxW = 280, boxH = 140;
+  let left, top;
+  if(paso.position === 'bottom') {
+    left = Math.min(rect.left, window.innerWidth - boxW - 16);
+    top = rect.bottom + 12;
+  } else {
+    left = rect.right + 12;
+    top = Math.min(rect.top, window.innerHeight - boxH - 16);
+  }
+  left = Math.max(12, left);
+  top = Math.max(12, top);
+  _tutorialBox.style.left = left + 'px';
+  _tutorialBox.style.top = top + 'px';
+
+  _tutorialBox.innerHTML = `
+    <div style="font-size:9px;color:#5DCAA5;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;font-family:'Courier New',monospace;">${paso.title}</div>
+    <div style="font-size:12px;color:#c8ddd0;line-height:1.6;margin-bottom:14px;">${paso.text}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:10px;color:#5a7a66;">${step + 1} de ${pasos.length}</span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="finalizarTutorial()" style="background:transparent;border:1px solid #2a3d30;border-radius:6px;padding:5px 12px;font-size:11px;color:#5a7a66;cursor:pointer;font-family:Inter,sans-serif;">Saltar</button>
+        <button onclick="mostrarPasoTutorial(${step + 1})" style="background:#1D9E75;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;font-family:Inter,sans-serif;">${step + 1 >= pasos.length ? 'Listo ✓' : 'Siguiente →'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(_tutorialBox);
+}
+
+function limpiarTutorial() {
+  if(_tutorialOverlay) {
+    if(_tutorialOverlay._highlight) _tutorialOverlay._highlight.remove();
+    _tutorialOverlay.remove();
+    _tutorialOverlay = null;
+  }
+  if(_tutorialBox) { _tutorialBox.remove(); _tutorialBox = null; }
+}
+
+async function finalizarTutorial() {
+  limpiarTutorial();
+  // Marcar como visto en Supabase
+  try {
+    await sb.from('perfiles').update({ tutorial_done: true }).eq('id', _currentUser.id);
+  } catch(e) { /* si falla no pasa nada */ }
+}
+
+function abrirFAQ(){ document.getElementById('modal-faq-overlay').classList.remove('hidden'); }
+function cerrarFAQ(){ document.getElementById('modal-faq-overlay').classList.add('hidden'); }
+
+async function gestionarPlan(){
+  const btn = document.getElementById('btn-gestionar-plan');
+  if(btn){ btn.textContent = 'Cargando...'; btn.disabled = true; }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) throw new Error('Sin sesión');
+
+    const res = await fetch('/.netlify/functions/portal-stripe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    });
+    const { url, error } = await res.json();
+    if(url){
+      window.location.href = url;
+    } else {
+      showModalAlert('Error', error || 'No se pudo abrir el portal. Escríbenos a soporte@tactiqfutbol.es');
+    }
+  } catch(e){
+    showModalAlert('Error', 'No se pudo conectar. Inténtalo de nuevo.');
+  } finally {
+    if(btn){ btn.textContent = 'Gestionar plan'; btn.disabled = false; }
+  }
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+</script>
+
+<!-- MODAL FAQ -->
+<div class="modal-overlay hidden" id="modal-faq-overlay" onclick="cerrarFAQ()">
+  <div onclick="event.stopPropagation()" style="background:#0e1210;border:1px solid #1e2d24;border-radius:14px;padding:24px;max-width:440px;width:94%;max-height:80vh;overflow-y:auto;font-family:'Inter',sans-serif;box-shadow:0 24px 60px rgba(0,0,0,0.8);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:14px;font-weight:700;color:#e8f0ec;">Preguntas frecuentes</div>
+      <button onclick="cerrarFAQ()" style="background:none;border:none;color:#5a7a66;font-size:18px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Qué vídeos puedo usar?</div>
+        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Cualquier vídeo de YouTube — grabado con móvil, GoPro, Veo o cualquier cámara. El vídeo debe ser <strong style="color:#c8ddd0;">público u oculto</strong>. Los vídeos privados no funcionan.</div>
+      </div>
+      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Puedo pausar y retomar el etiquetado?</div>
+        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Sí. El progreso se guarda en el navegador. Si cierras y vuelves a abrir la app, el partido seguirá donde lo dejaste mientras no limpies el caché.</div>
+      </div>
+      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Qué pasa cuando llego al límite de partidos?</div>
+        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">El contador se reinicia cada 30 días desde tu fecha de registro. Si necesitas más partidos puedes actualizar tu plan en cualquier momento.</div>
+      </div>
+      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Cómo funciona la IA táctica?</div>
+        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Cuando terminas de etiquetar y registras el partido, puedes acceder al análisis completo y chatear con la IA. Solo usa los datos reales de tu partido — nunca inventa.</div>
+      </div>
+      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Puedo cancelar cuando quiera?</div>
+        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Sí, sin permanencia. Pulsa "Gestionar plan" en la barra superior y cancela desde el portal. Mantienes el acceso hasta el final del período pagado.</div>
+      </div>
+      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Tengo algún problema? ¿A quién escribo?</div>
+        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Escríbenos a <a href="/cdn-cgi/l/email-protection#b0c3dfc0dfc2c4d5f0c4d1d3c4d9c1d6c5c4d2dfdc9ed5c3" style="color:#1D9E75;text-decoration:none;"><span class="__cf_email__" data-cfemail="d0a3bfa0bfa2a4b590a4b1b3a4b9a1b6a5a4b2bfbcfeb5a3">[email&#160;protected]</span></a> o a <a href="https://instagram.com/tactiqfutbol" target="_bla

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>tactiqfutbol.es — Próximamente</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{--g:#1D9E75;--gd:#0F6E56;--gdd:#085041;--gl:#5DCAA5;--ink:#0B1F17;--mu:#8BA89E;--wh:#F4FAF7}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--gdd);color:var(--wh);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;overflow:hidden}
+/* Grid táctico de fondo */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(29,158,117,.1) 1px,transparent 1px),linear-gradient(90deg,rgba(29,158,117,.1) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:480px}
+.logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:36px;text-decoration:none}
+.logo-ic{width:44px;height:44px;background:var(--g);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(29,158,117,.35)}
+.logo-txt{font-size:1.3rem;font-weight:500;color:#fff}
+.logo-txt em{font-style:normal;color:var(--gl);font-weight:400}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(15,110,86,.6);border:.5px solid rgba(93,202,165,.3);color:var(--gl);font-size:.63rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;padding:4px 14px;border-radius:3px;margin-bottom:22px;font-family:'DM Mono',monospace}
+.dot{width:5px;height:5px;background:var(--gl);border-radius:50%;animation:blink 1.4s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+h1{font-size:clamp(2rem,5vw,3rem);font-weight:700;letter-spacing:-1.5px;line-height:1.05;margin-bottom:14px}
+h1 span{color:var(--gl)}
+p{font-size:.92rem;color:rgba(244,250,247,.55);line-height:1.7;max-width:360px;margin:0 auto 28px;font-weight:300}
+.social{margin-top:36px}
+.social a{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;color:rgba(255,255,255,.35);text-decoration:none;font-family:'DM Mono',monospace;transition:color .2s}
+.social a:hover{color:var(--gl)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="#" class="logo">
+    <div class="logo-ic">
+      <svg width="22" height="22" viewBox="0 0 30 30" fill="none">
+        <circle cx="15" cy="15" r="12" stroke="white" stroke-width="1.2" fill="none" opacity=".35"/>
+        <line x1="15" y1="3" x2="15" y2="27" stroke="white" stroke-width="1" opacity=".35"/>
+        <line x1="3" y1="15" x2="27" y2="15" stroke="white" stroke-width="1" opacity=".35"/>
+        <circle cx="15" cy="15" r="3.5" fill="white"/>
+        <circle cx="8" cy="9" r="2" fill="white" opacity=".9"/>
+        <circle cx="22" cy="9" r="2" fill="white" opacity=".9"/>
+        <line x1="8" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/>
+        <line x1="22" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/>
+      </svg>
+    </div>
+    <span class="logo-txt">tactiqfutbol<em>.es</em></span>
+  </a>
+
+  <div class="badge"><span class="dot"></span>en desarrollo</div>
+
+  <h1>Análisis táctico<br>con IA.<br><span>Próximamente.</span></h1>
+
+  <p>Estamos ultimando los detalles. Síguenos en Instagram para saber cuándo abrimos.</p>
+
+  <div class="social">
+    <a href="https://instagram.com/tactiqfutbol" target="_blank">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+      @tactiqfutbol
+    </a>
+  </div>
+</div>
+
+
+</body>
+</html>

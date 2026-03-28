@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>tactiq — Acceder</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --green:#1D9E75;--green-dark:#0F6E56;--green-light:#5DCAA5;
+    --bg:#0e1210;--bg2:#131a16;--border:#1e2d24;
+    --ink:#c8ddd0;--muted:#a8c4b0;--dim:#a8c4b0;--ghost:#7a9a86;--faint:#4a6a56;
+  }
+  html,body{height:100%;font-family:'Inter',sans-serif;}
+  body{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px 16px;}
+  body::before{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(29,158,117,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(29,158,117,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;}
+
+  .card{position:relative;z-index:1;background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:380px;padding:36px 32px 28px;display:flex;flex-direction:column;gap:22px;}
+
+  .logo-row{display:flex;align-items:center;justify-content:center;gap:10px;}
+  .logo-icon{width:40px;height:40px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(29,158,117,0.3);}
+  .logo-text{font-size:24px;font-weight:500;color:#fff;letter-spacing:-0.5px;}
+
+  .headline{text-align:center;}
+  .headline h1{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:5px;}
+  .headline p{font-size:12px;color:var(--ghost);line-height:1.5;}
+
+  .fields{display:flex;flex-direction:column;gap:12px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:0.6px;}
+  .field input{background:#0a0e0c;border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;color:var(--ink);font-family:'Inter',sans-serif;outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+  .field input:focus{border-color:rgba(29,158,117,0.5);box-shadow:0 0 0 3px rgba(29,158,117,0.08);}
+  .field input::placeholder{color:var(--ghost);}
+
+  .forgot{font-size:10px;color:var(--ghost);text-align:right;cursor:pointer;margin-top:-6px;transition:color 0.15s;}
+  .forgot:hover{color:var(--green-light);}
+
+  .btn-primary{background:linear-gradient(180deg,var(--green) 0%,var(--green-dark) 100%);border:none;border-bottom:3px solid #0a4a35;border-radius:10px;padding:12px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:0.3px;transition:all 0.1s;position:relative;top:0;box-shadow:0 4px 16px rgba(29,158,117,0.2);width:100%;}
+  .btn-primary:hover{box-shadow:0 6px 20px rgba(29,158,117,0.3);}
+  .btn-primary:active{top:2px;border-bottom-width:1px;box-shadow:none;}
+  .btn-primary:disabled{opacity:0.6;cursor:not-allowed;pointer-events:none;}
+
+  .btn-secondary{background:transparent;border:1px solid var(--border);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.1s;width:100%;}
+  .btn-secondary:hover{background:rgba(255,255,255,0.03);border-color:rgba(29,158,117,0.3);color:var(--ink);}
+
+  .msg{display:none;border-radius:7px;padding:9px 12px;font-size:11px;text-align:center;}
+  .msg.show{display:block;}
+  .msg.error{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171;}
+  .msg.success{background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);color:var(--green-light);}
+
+  .divider{display:flex;align-items:center;gap:10px;}
+  .divider hr{flex:1;border:none;border-top:1px solid var(--border);}
+  .divider span{font-size:10px;color:var(--ghost);}
+
+  .footer-txt{text-align:center;font-size:11px;color:var(--ghost);}
+  .footer-txt a{color:var(--green-light);cursor:pointer;text-decoration:none;font-weight:500;}
+  .footer-txt a:hover{text-decoration:underline;}
+
+  .legal{position:relative;z-index:1;margin-top:16px;font-size:10px;color:var(--ghost);text-align:center;line-height:1.6;}
+  .legal a{color:var(--ghost);cursor:pointer;}
+
+  /* Pantallas */
+  .screen{display:none;flex-direction:column;gap:22px;}
+  .screen.active{display:flex;}
+
+  .back-link{font-size:11px;color:var(--ghost);cursor:pointer;text-align:center;}
+  .back-link:hover{color:var(--muted);}
+  .back-link span{color:var(--green-light);}
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- LOGO — siempre visible -->
+  <div class="logo-row">
+    <div class="logo-icon">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="2.2" fill="white"/>
+        <circle cx="9" cy="2.5" r="1.4" fill="white" opacity="0.9"/>
+        <circle cx="9" cy="15.5" r="1.4" fill="white" opacity="0.9"/>
+        <circle cx="2.5" cy="9" r="1.4" fill="white" opacity="0.9"/>
+        <circle cx="15.5" cy="9" r="1.4" fill="white" opacity="0.9"/>
+        <line x1="9" y1="9" x2="9" y2="2.5" stroke="white" stroke-width="0.8" opacity="0.45"/>
+        <line x1="9" y1="9" x2="9" y2="15.5" stroke="white" stroke-width="0.8" opacity="0.45"/>
+        <line x1="9" y1="9" x2="2.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.45"/>
+        <line x1="9" y1="9" x2="15.5" y2="9" stroke="white" stroke-width="0.8" opacity="0.45"/>
+      </svg>
+    </div>
+    <span class="logo-text">tactiqfutbol<span style="font-size:20px;font-weight:400;color:#5DCAA5;letter-spacing:0;">.es</span></span>
+  </div>
+
+  <!-- PANTALLA: LOGIN -->
+  <div class="screen active" id="screen-login">
+    <div class="headline">
+      <h1>Accede a tu cuenta</h1>
+      <p>Analiza tu equipo, partido a partido.</p>
+    </div>
+    <div class="msg error" id="login-error"></div>
+    <div class="fields">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <div class="forgot" onclick="showScreen('screen-forgot')">¿Olvidaste tu contraseña?</div>
+    </div>
+    <button class="btn-primary" id="btn-login" onclick="doLogin()">Entrar →</button>
+    <div class="divider"><hr/><span>¿nuevo en tactiq?</span><hr/></div>
+    <button class="btn-secondary" onclick="showScreen('screen-register')">Crear cuenta gratis</button>
+  </div>
+
+  <!-- PANTALLA: REGISTRO -->
+  <div class="screen" id="screen-register">
+    <div class="headline">
+      <h1>Crear cuenta</h1>
+      <p>Empieza a analizar tus partidos hoy.</p>
+    </div>
+    <div class="msg error" id="register-error"></div>
+    <div class="msg success" id="register-success"></div>
+    <div class="fields">
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" id="reg-nombre" placeholder="Tu nombre" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="reg-pass" placeholder="Mínimo 8 caracteres" autocomplete="new-password"/>
+      </div>
+    </div>
+    <button class="btn-primary" id="btn-register" onclick="doRegister()">Crear cuenta →</button>
+    <div class="back-link" onclick="showScreen('screen-login')">← Volver a <span>iniciar sesión</span></div>
+  </div>
+
+  <!-- PANTALLA: RECUPERAR CONTRASEÑA -->
+  <div class="screen" id="screen-forgot">
+    <div class="headline">
+      <h1>Recuperar contraseña</h1>
+      <p>Te enviaremos un enlace para restablecer tu contraseña.</p>
+    </div>
+    <div class="msg error" id="forgot-error"></div>
+    <div class="msg success" id="forgot-success"></div>
+    <div class="fields">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="forgot-email" placeholder="tu@email.com" autocomplete="email"/>
+      </div>
+    </div>
+    <button class="btn-primary" id="btn-forgot" onclick="doForgot()">Enviar enlace →</button>
+    <div class="back-link" onclick="showScreen('screen-login')">← Volver a <span>iniciar sesión</span></div>
+  </div>
+
+</div>
+
+<div class="legal">
+  Al acceder aceptas los <a href="terminos-de-uso.html">Términos de uso</a> y la <a href="politica-de-privacidad.html">Política de privacidad</a>
+</div>
+
+<script data-cfasync="false">
+// ── Supabase init ─────────────────────────────
+const SUPABASE_URL  = 'https://hqxkvmfdmukzgnomdsht.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxeGt2bWZkbXVremdub21kc2h0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTI4OTQsImV4cCI6MjA4OTQ4ODg5NH0.Jml68Ap2yjli7siNOvfISKqXPR6bzypvmDGAiGUSs6s';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── Leer plan de la URL (?plan=entrenador|analista|elite) ──
+const _planParam = new URLSearchParams(window.location.search).get('plan');
+if(_planParam) {
+  // Guardarlo para usarlo tras el login/registro
+  sessionStorage.setItem('plan_pendiente', _planParam);
+  // Mostrar pantalla de registro directamente si viene de un plan
+  document.addEventListener('DOMContentLoaded', () => showScreen('screen-register'));
+}
+
+// ── Redirigir según plan pendiente ────────────
+async function redirigirTrasLogin() {
+  const plan = sessionStorage.getItem('plan_pendiente');
+  sessionStorage.removeItem('plan_pendiente');
+  if(plan && ['entrenador','analista','elite'].includes(plan)) {
+    // Lanzar checkout de Stripe
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const res = await fetch('/.netlify/functions/crear-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ plan })
+      });
+      const { url } = await res.json();
+      if(url) { window.location.href = url; return; }
+    } catch(e) { /* si falla el checkout, ir a la app igualmente */ }
+  }
+  window.location.href = 'app.html';
+}
+
+// ── Comprobar sesión activa al cargar ─────────
+(async function(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session) await redirigirTrasLogin();
+})();
+
+// ── Navegación entre pantallas ────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // Limpiar mensajes
+  document.querySelectorAll('.msg').forEach(m => { m.classList.remove('show'); m.textContent = ''; });
+}
+
+function setLoading(btnId, loading, text){
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Un momento...' : text;
+}
+
+function showError(id, msg){ const el=document.getElementById(id); el.textContent=msg; el.className='msg error show'; }
+function showSuccess(id, msg){ const el=document.getElementById(id); el.textContent=msg; el.className='msg success show'; }
+
+// ── LOGIN ─────────────────────────────────────
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass').value;
+  if(!email || !pass){ showError('login-error','Introduce tu email y contraseña'); return; }
+
+  setLoading('btn-login', true, 'Entrar →');
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+  if(error){
+    setLoading('btn-login', false, 'Entrar →');
+    let msg = 'Email o contraseña incorrectos';
+    if(error.message.includes('Email not confirmed')) msg = 'Confirma tu email antes de entrar — revisa tu bandeja de entrada';
+    else if(error.message.includes('Too many requests')) msg = 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo';
+    else if(error.message.includes('User not found') || error.message.includes('Invalid login')) msg = 'Email o contraseña incorrectos';
+    else if(error.message.includes('Email already')) msg = 'Este email ya tiene una cuenta. Inicia sesión directamente';
+    showError('login-error', msg);
+    document.getElementById('login-pass').value = '';
+    return;
+  }
+
+  // Login correcto → redirigir (con plan pendiente si lo hay)
+  await redirigirTrasLogin();
+}
+
+// ── REGISTRO ──────────────────────────────────
+async function doRegister(){
+  const nombre = document.getElementById('reg-nombre').value.trim();
+  const email  = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass   = document.getElementById('reg-pass').value;
+
+  if(!nombre || !email || !pass){ showError('register-error','Rellena todos los campos'); return; }
+  if(pass.length < 8){ showError('register-error','La contraseña debe tener al menos 8 caracteres'); return; }
+
+  setLoading('btn-register', true, 'Crear cuenta →');
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password: pass,
+    options: { data: { nombre } }
+  });
+
+  if(error){
+    setLoading('btn-register', false, 'Crear cuenta →');
+    let regMsg = error.message;
+    if(error.message.includes('already registered') || error.message.includes('already been registered')) regMsg = 'Este email ya tiene una cuenta. Inicia sesión directamente';
+    else if(error.message.includes('Password should')) regMsg = 'La contraseña debe tener al menos 8 caracteres';
+    else if(error.message.includes('valid email')) regMsg = 'Introduce un email válido';
+    showError('register-error', regMsg);
+    return;
+  }
+
+  setLoading('btn-register', false, 'Crear cuenta →');
+  const planPendiente = sessionStorage.getItem('plan_pendiente');
+  const msgExtra = planPendiente
+    ? ` Cuando entres te llevaremos al plan ${planPendiente.charAt(0).toUpperCase()+planPendiente.slice(1)} directamente.`
+    : '';
+  showSuccess('register-success', `✓ Cuenta creada. Revisa tu email para confirmar tu cuenta antes de entrar.${msgExtra}`);
+}
+
+// ── RECUPERAR CONTRASEÑA ──────────────────────
+async function doForgot(){
+  const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+  if(!email){ showError('forgot-error','Introduce tu email'); return; }
+
+  setLoading('btn-forgot', true, 'Enviar enlace →');
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://tactiqfutbol.es/app.html'
+  });
+
+  setLoading('btn-forgot', false, 'Enviar enlace →');
+  if(error){
+    let fMsg = error.message;
+    if(error.message.includes('rate limit') || error.message.includes('Too many')) fMsg = 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo';
+    showError('forgot-error', fMsg);
+    return;
+  }
+  showSuccess('forgot-success', '✓ Email enviado. Revisa tu bandeja de entrada.');
+}
+
+// ── Enter key ─────────────────────────────────
+document.addEventListener('keydown', function(e){
+  if(e.key !== 'Enter') return;
+  const active = document.querySelector('.screen.active');
+  if(!active) return;
+  if(active.id === 'screen-login') doLogin();
+  if(active.id === 'screen-register') doRegister();
+  if(active.id === 'screen-forgot') doForgot();
+});
+</script>
+</body>
+</html>
