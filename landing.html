@@ -44,7 +44,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);line-height:1.6;overflow-
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;height:56px;background:rgba(11,31,23,.96);border-bottom:.5px solid rgba(29,158,117,.2);backdrop-filter:blur(12px)}
 .logo{display:flex;align-items:center;gap:8px;text-decoration:none}
-.logo-ic{width:28px;height:28px;background:var(--g);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-ic{width:28px;height:28px;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .logo-txt{font-size:1rem;font-weight:500;color:var(--wh);letter-spacing:-.3px}
 .logo-txt em{font-style:normal;color:var(--gl);font-weight:400}
 .nav-links{display:flex;gap:1.4rem;list-style:none}
@@ -484,7 +484,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <nav id="mainnav">
   <a href="#" class="logo">
     <div class="logo-ic">
-      <svg width="16" height="16" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="12" stroke="white" stroke-width="1.2" fill="none" opacity=".35"/><line x1="15" y1="3" x2="15" y2="27" stroke="white" stroke-width="1" opacity=".35"/><line x1="3" y1="15" x2="27" y2="15" stroke="white" stroke-width="1" opacity=".35"/><circle cx="15" cy="15" r="3.5" fill="white"/><circle cx="8" cy="9" r="2" fill="white" opacity=".9"/><circle cx="22" cy="9" r="2" fill="white" opacity=".9"/><line x1="8" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/><line x1="22" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/></svg>
+      <svg width="26" height="26" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="12" stroke="white" stroke-width="1.2" fill="none" opacity=".35"/><line x1="15" y1="3" x2="15" y2="27" stroke="white" stroke-width="1" opacity=".35"/><line x1="3" y1="15" x2="27" y2="15" stroke="white" stroke-width="1" opacity=".35"/><circle cx="15" cy="15" r="3.5" fill="white"/><circle cx="8" cy="9" r="2" fill="white" opacity=".9"/><circle cx="22" cy="9" r="2" fill="white" opacity=".9"/><line x1="8" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/><line x1="22" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/></svg>
     </div>
     <span class="logo-txt">tactiqfutbol<em>.es</em></span>
   </a>
@@ -739,7 +739,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- ═══ CÓMO FUNCIONA — jugada animada sobre fondo oscuro ═══ -->
 <section class="sec-dark" id="como-funciona">
   <div class="inn">
-    <div class="sec-lbl-dark rev">01 / Cómo funciona</div>
+    <div class="sec-lbl-dark rev">Cómo funciona</div>
     <h2 class="sh-dark rev"><strong>La jugada completa</strong> <span class="dim">— de la grabación al gol táctico</span></h2>
     <p class="ss-dark rev">Seis pasos. Como una jugada de ataque: cada pase lleva al siguiente, hasta el análisis final.</p>
 
@@ -890,7 +890,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- FUNCIONALIDADES — fondo verde claro, tarjetas oscuras -->
 <section class="sec-green-light" id="funcionalidades">
   <div class="inn">
-    <div class="sec-lbl-ongreen rev">02 / Pizarra</div>
+    <div class="sec-lbl-ongreen rev">Pizarra</div>
     <h2 class="sh-light rev"><strong>Lo que tienes</strong> <span class="dim">cuando abres el partido</span></h2>
     <p class="ss-light rev">Todo lo que necesita un analista. Nada de lo que no necesita un entrenador de base.</p>
     <div class="fg">
@@ -914,7 +914,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- PRECIOS — blanco, tarjetas oscuras -->
 <section class="sec-white" id="precios">
   <div class="inn">
-    <div class="sec-lbl-light rev">03 / Precios</div>
+    <div class="sec-lbl-light rev">Planes</div>
     <h2 class="sh-light rev"><strong>Un partido gratis.</strong> <span class="dim">Luego decide.</span></h2>
     <p class="ss-light rev">Analiza tu primer partido sin tarjeta. Si convence, elige plan. Sin permanencia.</p>
     <div class="pg">
@@ -971,14 +971,14 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
         <a href="https://tactiqfutbol.es/index-app.html?plan=elite" class="pbtn pbtn-g">Elegir Élite</a>
       </div>
     </div>
-    <p class="pfooter">¿Dudas? <a href="https://tactiqfutbol.es/index-app.html" class="">Empieza con el partido gratis</a> — sin tarjeta, sin compromiso.</p>
+    <p class="pfooter" style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:18px;">¿Dudas? <a href="https://tactiqfutbol.es/index-app.html" style="color:var(--gl);font-weight:600;text-decoration:underline;text-underline-offset:3px;">Empieza con el partido gratis</a> — sin tarjeta, sin compromiso.</p>
   </div>
 </section>
 
 <!-- TESTIMONIOS — fondo oscuro, tarjetas inkl -->
 <section class="sec-dark" id="testimonios">
   <div class="inn">
-    <div class="sec-lbl-dark rev">04 / Testimonios</div>
+    <div class="sec-lbl-dark rev">Testimonios</div>
     <h2 class="sh-dark rev"><strong>Lo que dicen</strong> <span class="dim">los entrenadores</span></h2>
     <div class="tg">
       <div class="testi"><div class="stars">★★★★★</div><p class="ttxt">Por fin una herramienta de análisis que puedo usar yo solo, en casa, viendo el vídeo del partido tranquilamente.</p><div class="tauth"><div class="tav">CM</div><div><div class="tname">Carlos M.</div><div class="trole">Entrenador juvenil · Aragón</div></div></div></div>
@@ -992,7 +992,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- FAQ — fondo oscuro -->
 <section class="sec-faq" id="faq">
   <div class="inn" style="border-top:.5px solid rgba(29,158,117,.1)">
-    <div class="sec-lbl-dark rev" style="display:block;text-align:center">05 / FAQ</div>
+    <div class="sec-lbl-dark rev" style="display:block;text-align:center">FAQ</div>
     <h2 class="sh-dark rev" style="text-align:center;margin-bottom:28px"><strong>Preguntas</strong> <span class="dim">frecuentes</span></h2>
     <div class="faq">
       <div class="fitem"><button class="fq" onclick="tf(this)">¿Necesito instalar algo?<span class="fic">+</span></button><div class="fa-ans"><p>No. Funciona completamente en el navegador. Abre la web desde cualquier dispositivo y ya está.</p></div></div>
