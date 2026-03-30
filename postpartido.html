@@ -4,6 +4,10 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>tactiq — Post-partido</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- Google Analytics — reemplaza G-XXXXXXXXXX con tu ID real -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -1068,7 +1072,7 @@ function renderTabla(){
 // ═══════════════════════════════════════════════
 const chatHistory = [];
 let preguntasUsadas = 0;
-const PREGUNTAS_LIMITE = { entrenador: 10, analista: 20, elite: 30 };
+const PREGUNTAS_LIMITE = { trial: 10, entrenador: 10, analista: 20, elite: 30 };
 
 async function sendChat(){
   const input = document.getElementById('chat-input');
@@ -1094,34 +1098,20 @@ async function sendChat(){
 
   const thinkingEl = appendMsg('ia', '⚽ Analizando el partido...', 'tactiq IA');
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session?.access_token || '';
     const res = await fetch('/.netlify/functions/chat', {
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ messages: chatHistory })
     });
     const data = await res.json();
-    if(res.status === 429){
-      thinkingEl.querySelector('.msg-text').textContent = 'Demasiadas peticiones. Espera un momento.';
-      preguntasUsadas--;
-      _actualizarContadorIA();
-      return;
-    }
-    if(res.status === 401 || res.status === 403){
-      thinkingEl.querySelector('.msg-text').textContent = data.error || 'No autorizado.';
-      preguntasUsadas--;
-      _actualizarContadorIA();
-      return;
-    }
     const reply = data.content?.[0]?.text || 'No se pudo obtener respuesta.';
     thinkingEl.querySelector('.msg-text').textContent = reply;
     chatHistory.push({ role:'assistant', content: reply });
   } catch(e) {
-    thinkingEl.querySelector('.msg-text').textContent = 'Error de conexión. Inténtalo de nuevo.';
+    const esConexion = !navigator.onLine;
+    thinkingEl.querySelector('.msg-text').textContent = esConexion
+      ? 'Sin conexión a internet. Comprueba tu red e inténtalo de nuevo.'
+      : 'El análisis no está disponible en este momento. Si el problema persiste, escríbenos a soporte@tactiqfutbol.es';
     preguntasUsadas--; // no contar si falla
     _actualizarContadorIA();
   }
@@ -1361,34 +1351,22 @@ async function sendChat(){
   chatHistory.push({ role: 'user', content: msg });
   const thinkingEl = appendMsg('ia', '⚽ Analizando el partido...', 'tactiq IA');
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session?.access_token || '';
     const res = await fetch('/.netlify/functions/chat', {
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ messages: chatHistory })
     });
     const data = await res.json();
-    if(res.status === 429){
-      thinkingEl.querySelector('.msg-text').textContent = 'Demasiadas peticiones. Espera un momento.';
-      return;
-    }
-    if(res.status === 401 || res.status === 403){
-      thinkingEl.querySelector('.msg-text').textContent = data.error || 'No autorizado.';
-      return;
-    }
     const reply = data.content?.[0]?.text || 'No se pudo obtener respuesta.';
     thinkingEl.querySelector('.msg-text').textContent = reply;
     chatHistory.push({ role:'assistant', content: reply });
   } catch(e) {
-    thinkingEl.querySelector('.msg-text').textContent = 'Error de conexión. Inténtalo de nuevo.';
+    const esConexion = !navigator.onLine;
+    thinkingEl.querySelector('.msg-text').textContent = esConexion
+      ? 'Sin conexión a internet. Comprueba tu red e inténtalo de nuevo.'
+      : 'El análisis no está disponible en este momento. Si el problema persiste, escríbenos a soporte@tactiqfutbol.es';
   }
 }
-
-function appendMsg(type, text, name){
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = type === 'ia' ? 'msg-ia' : 'msg-user';
@@ -2018,7 +1996,10 @@ async function abrirHistorial(){
       listEl.appendChild(aviso);
     }
   } catch(e){
-    listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171;font-size:11px;">Error cargando partidos.</div>';
+    const esConexion = !navigator.onLine;
+    listEl.innerHTML = esConexion
+      ? '<div style="text-align:center;padding:30px;font-size:11px;color:#f87171;">📡 Sin conexión. Comprueba tu red e inténtalo de nuevo.</div>'
+      : '<div style="text-align:center;padding:30px;font-size:11px;color:#f87171;line-height:1.6;">⚠ No se pudieron cargar los partidos.<br><span style="color:#6a9a7a;font-size:10px;">Si el problema persiste, escríbenos a soporte@tactiqfutbol.es</span></div>';
   }
 }
 

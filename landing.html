@@ -3,29 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>tactiqfutbol.es — Análisis táctico de fútbol con IA</title>
-<meta name="description" content="Convierte el vídeo de tu partido en análisis táctico con inteligencia artificial. Campogramas, mapas de calor y chat IA. Tu primer partido es gratis.">
-<meta name="keywords" content="análisis táctico fútbol, análisis post-partido, videoanalisis fútbol, táctica fútbol IA, campograma fútbol, entrenador fútbol herramienta">
+<title>tactiqfutbol.es — Lee el partido. Analiza. Gana el siguiente.</title>
+<meta name="description" content="Convierte el vídeo de tu partido en análisis táctico con IA. Campogramas, mapas de calor y chat táctico. Tu primer partido es gratis.">
+<meta name="keywords" content="análisis táctico fútbol, videoanálisis fútbol, IA fútbol, análisis post-partido, campograma, mapa de calor fútbol, entrenador fútbol herramienta">
 <meta name="robots" content="index, follow">
-<meta name="author" content="tactiqfutbol.es">
+<meta name="author" content="tactiq">
 <link rel="canonical" href="https://tactiqfutbol.es/">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tactiqfutbol.es/">
-<meta property="og:title" content="tactiqfutbol.es — Análisis táctico de fútbol con IA">
-<meta property="og:description" content="Convierte el vídeo de tu partido en análisis táctico con IA. Campogramas, mapas de calor y chat IA. Tu primer partido es gratis.">
-<meta property="og:image" content="https://tactiqfutbol.es/campo-email.png">
+<meta property="og:title" content="tactiq — football intelligence">
+<meta property="og:description" content="Convierte el vídeo de tu partido en análisis táctico con IA. Campogramas, mapas de calor y chat táctico. Tu primer partido es gratis.">
+<meta property="og:image" content="https://tactiqfutbol.es/og-image.png">
 <meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="tactiq">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@tactiqfutbol">
-<meta name="twitter:title" content="tactiqfutbol.es — Análisis táctico de fútbol con IA">
+<meta name="twitter:title" content="tactiq — football intelligence">
 <meta name="twitter:description" content="Convierte el vídeo de tu partido en análisis táctico con IA. Tu primer partido es gratis.">
-<meta name="twitter:image" content="https://tactiqfutbol.es/campo-email.png">
+<meta name="twitter:image" content="https://tactiqfutbol.es/og-image.png">
 
-<!-- Google Analytics — pendiente de configurar -->
+<!-- Google Analytics — reemplaza G-XXXXXXXXXX con tu ID real -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -44,7 +53,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);line-height:1.6;overflow-
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;height:56px;background:rgba(11,31,23,.96);border-bottom:.5px solid rgba(29,158,117,.2);backdrop-filter:blur(12px)}
 .logo{display:flex;align-items:center;gap:8px;text-decoration:none}
-.logo-ic{width:28px;height:28px;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-ic{width:28px;height:28px;background:var(--g);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .logo-txt{font-size:1rem;font-weight:500;color:var(--wh);letter-spacing:-.3px}
 .logo-txt em{font-style:normal;color:var(--gl);font-weight:400}
 .nav-links{display:flex;gap:1.4rem;list-style:none}
@@ -250,18 +259,16 @@ h2.sh-light .dim{font-weight:300;opacity:.4}
 .jrastro{
   position:absolute;
   width:5px;height:5px;border-radius:50%;
-  background:rgba(93,202,165,.85);
-  box-shadow:0 0 4px rgba(93,202,165,.5);
+  background:rgba(93,202,165,.65);
   pointer-events:none;
   z-index:2;
   transform:translate(-50%,-50%);
   animation:rastroFade 3.5s ease forwards;
 }
 @keyframes rastroFade{
-  0%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}
-  40%{opacity:.8;transform:translate(-50%,-50%) scale(1)}
-  80%{opacity:.4;transform:translate(-50%,-50%) scale(.8)}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(.3)}
+  0%{opacity:.7;transform:translate(-50%,-50%) scale(1)}
+  60%{opacity:.3;transform:translate(-50%,-50%) scale(.75)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(.4)}
 }
 
 /* Cada paso — siempre visible */
@@ -348,6 +355,24 @@ h2.sh-light .dim{font-weight:300;opacity:.4}
 .pbtn-w:hover{background:var(--gs)}
 .pfooter{text-align:center;font-size:.68rem;color:var(--mu);margin-top:12px;font-family:'DM Mono',monospace}
 .pfooter a{color:var(--gl);text-decoration:none}
+
+/* TOGGLE MENSUAL/ANUAL */
+.billing-toggle{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:24px}
+.billing-opt{font-size:.78rem;font-weight:500;color:rgba(139,168,158,.5);transition:color .2s;cursor:pointer;font-family:'DM Mono',monospace}
+.billing-opt.active{color:var(--wh)}
+.toggle-track{width:44px;height:24px;background:rgba(29,158,117,.2);border-radius:99px;border:.5px solid rgba(93,202,165,.3);position:relative;cursor:pointer;transition:background .2s}
+.toggle-track.anual{background:var(--g)}
+.toggle-thumb{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:2px;left:3px;transition:left .2s cubic-bezier(.4,0,.2,1)}
+.toggle-track.anual .toggle-thumb{left:23px}
+.billing-badge{background:rgba(29,158,117,.15);border:.5px solid rgba(93,202,165,.3);color:var(--gl);font-size:.62rem;font-weight:600;padding:2px 8px;border-radius:99px;font-family:'DM Mono',monospace;letter-spacing:.04em}
+.pamt-anual{display:none}
+.psaving{display:none;font-size:.62rem;color:var(--gl);font-family:'DM Mono',monospace;margin-top:2px;font-weight:500}
+body.modo-anual .pamt-mensual{display:none}
+body.modo-anual .pamt-anual{display:inline}
+body.modo-anual .pper-mensual{display:none}
+body.modo-anual .pper-anual{display:inline}
+body.modo-anual .psaving{display:block}
+body.modo-anual .pbtn[data-plan-anual]{display:flex}
 
 /* TESTIMONIOS — fondo oscuro, tarjetas ink */
 .tg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -484,19 +509,19 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <nav id="mainnav">
   <a href="#" class="logo">
     <div class="logo-ic">
-      <svg width="26" height="26" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="12" stroke="white" stroke-width="1.2" fill="none" opacity=".35"/><line x1="15" y1="3" x2="15" y2="27" stroke="white" stroke-width="1" opacity=".35"/><line x1="3" y1="15" x2="27" y2="15" stroke="white" stroke-width="1" opacity=".35"/><circle cx="15" cy="15" r="3.5" fill="white"/><circle cx="8" cy="9" r="2" fill="white" opacity=".9"/><circle cx="22" cy="9" r="2" fill="white" opacity=".9"/><line x1="8" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/><line x1="22" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/></svg>
+      <svg width="16" height="16" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="12" stroke="white" stroke-width="1.2" fill="none" opacity=".35"/><line x1="15" y1="3" x2="15" y2="27" stroke="white" stroke-width="1" opacity=".35"/><line x1="3" y1="15" x2="27" y2="15" stroke="white" stroke-width="1" opacity=".35"/><circle cx="15" cy="15" r="3.5" fill="white"/><circle cx="8" cy="9" r="2" fill="white" opacity=".9"/><circle cx="22" cy="9" r="2" fill="white" opacity=".9"/><line x1="8" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/><line x1="22" y1="9" x2="15" y2="15" stroke="white" stroke-width="1" opacity=".55"/></svg>
     </div>
     <span class="logo-txt">tactiqfutbol<em>.es</em></span>
   </a>
   <ul class="nav-links">
     <li><a href="#como-funciona">Cómo funciona</a></li>
-    <li><a href="#funcionalidades">Pizarra</a></li>
+    <li><a href="#funcionalidades">Funcionalidades</a></li>
     <li><a href="#precios">Precios</a></li>
     <li><a href="#faq">FAQ</a></li>
   </ul>
   <div class="nav-r">
-    <a href="https://tactiqfutbol.es/index-app.html" class="btn btn-ghost">Iniciar sesión</a>
-    <a href="https://tactiqfutbol.es/index-app.html" class="btn btn-main">Prueba gratis</a>
+    <a href="https://tourmaline-lily-720d5b.netlify.app/index.html" class="btn btn-ghost">Iniciar sesión</a>
+    <a href="https://tourmaline-lily-720d5b.netlify.app/index.html" class="btn btn-main">Prueba gratis</a>
   </div>
 </nav>
 
@@ -544,7 +569,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
     <div class="mono-sub">Read the game. Own the data.</div>
     <p class="hero-desc">La IA analiza los datos reales de tu partido — cada jugada, zona y patrón — y te da el análisis táctico que potencia tus decisiones como entrenador.</p>
     <div class="hero-acts">
-      <a href="https://tactiqfutbol.es/index-app.html" class="btn btn-main btn-lg">
+      <a href="https://tourmaline-lily-720d5b.netlify.app/index.html" class="btn btn-main btn-lg">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><polygon points="2,1 11,6.5 2,12" fill="white"/></svg>
         Analiza tu primer partido — gratis
       </a>
@@ -739,7 +764,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- ═══ CÓMO FUNCIONA — jugada animada sobre fondo oscuro ═══ -->
 <section class="sec-dark" id="como-funciona">
   <div class="inn">
-    <div class="sec-lbl-dark rev">Cómo funciona</div>
+    <div class="sec-lbl-dark rev">01 / Cómo funciona</div>
     <h2 class="sh-dark rev"><strong>La jugada completa</strong> <span class="dim">— de la grabación al gol táctico</span></h2>
     <p class="ss-dark rev">Seis pasos. Como una jugada de ataque: cada pase lleva al siguiente, hasta el análisis final.</p>
 
@@ -789,7 +814,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
               <div class="jball" id="jb2">2</div>
               <div class="jstep-tag">Subida</div>
               <h3>Súbelo a YouTube</h3>
-              <p>Público u oculto (no privado). Copia la URL.</p>
+              <p>Público u oculto. Copia la URL.</p>
             </div>
             <div class="mob-arr"><div class="mob-arr-line"></div>→</div>
             <div class="jstep" id="js3">
@@ -890,7 +915,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- FUNCIONALIDADES — fondo verde claro, tarjetas oscuras -->
 <section class="sec-green-light" id="funcionalidades">
   <div class="inn">
-    <div class="sec-lbl-ongreen rev">Pizarra</div>
+    <div class="sec-lbl-ongreen rev">02 / Funcionalidades</div>
     <h2 class="sh-light rev"><strong>Lo que tienes</strong> <span class="dim">cuando abres el partido</span></h2>
     <p class="ss-light rev">Todo lo que necesita un analista. Nada de lo que no necesita un entrenador de base.</p>
     <div class="fg">
@@ -914,16 +939,30 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- PRECIOS — blanco, tarjetas oscuras -->
 <section class="sec-white" id="precios">
   <div class="inn">
-    <div class="sec-lbl-light rev">Planes</div>
+    <div class="sec-lbl-light rev">03 / Planes</div>
     <h2 class="sh-light rev"><strong>Un partido gratis.</strong> <span class="dim">Luego decide.</span></h2>
     <p class="ss-light rev">Analiza tu primer partido sin tarjeta. Si convence, elige plan. Sin permanencia.</p>
+
+    <!-- Toggle mensual / anual -->
+    <div class="billing-toggle rev">
+      <span class="billing-opt active" id="lbl-mensual" onclick="setBilling('mensual')">Mensual</span>
+      <div class="toggle-track" id="billing-track" onclick="toggleBilling()">
+        <div class="toggle-thumb"></div>
+      </div>
+      <span class="billing-opt" id="lbl-anual" onclick="setBilling('anual')">Anual</span>
+      <span class="billing-badge">2 meses gratis</span>
+    </div>
+
     <div class="pg">
       <div class="plan">
         <div class="pname">Entrenador</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div><span class="pamt">9€</span> <span class="pper">/mes</span></div>
-          <img src="plan-icon-entrenador.png" width="44" height="44" alt="" style="opacity:0.85;flex-shrink:0;"/>
+        <div>
+          <span class="pamt pamt-mensual">9€</span>
+          <span class="pamt pamt-anual">79€</span>
+          <span class="pper pper-mensual">/mes</span>
+          <span class="pper pper-anual" style="display:none">/año</span>
         </div>
+        <div class="psaving">Ahorras 29€ respecto al mensual</div>
         <div class="pdesc">Para entrenadores que analizan con regularidad</div>
         <div class="ppartidos"><div class="ppartidos-n">3 partidos</div><div class="ppartidos-l">por mes</div></div>
         <div class="pdiv"></div>
@@ -933,15 +972,18 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
           <li class="pf"><div class="pchk"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6.5L7 1.5" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>Campograma, calor, gráficas</li>
           <li class="pf"><div class="pchk"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6.5L7 1.5" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>Modo Vestuario y compartir</li>
         </ul>
-        <a href="https://tactiqfutbol.es/index-app.html?plan=entrenador" class="pbtn pbtn-g">Elegir Entrenador</a>
+        <a href="https://tactiqfutbol.es/index.html?plan=entrenador" class="pbtn pbtn-g" id="btn-entrenador">Elegir Entrenador</a>
       </div>
       <div class="plan hot">
         <div class="ppop">más popular</div>
         <div class="pname">Analista</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div><span class="pamt">12€</span> <span class="pper">/mes</span></div>
-          <img src="plan-icon-analista.png" width="44" height="44" alt="" style="opacity:0.85;flex-shrink:0;"/>
+        <div>
+          <span class="pamt pamt-mensual">12€</span>
+          <span class="pamt pamt-anual">99€</span>
+          <span class="pper pper-mensual">/mes</span>
+          <span class="pper pper-anual" style="display:none">/año</span>
         </div>
+        <div class="psaving">Ahorras 45€ respecto al mensual</div>
         <div class="pdesc">Para analistas y entrenadores exigentes</div>
         <div class="ppartidos"><div class="ppartidos-n">5 partidos</div><div class="ppartidos-l">por mes</div></div>
         <div class="pdiv"></div>
@@ -951,14 +993,17 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
           <li class="pf"><div class="pchk"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6.5L7 1.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>Todo lo del plan Entrenador</li>
           <li class="pf"><div class="pchk"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6.5L7 1.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>Acceso anticipado a novedades</li>
         </ul>
-        <a href="https://tactiqfutbol.es/index-app.html?plan=analista" class="pbtn pbtn-w">Elegir Analista</a>
+        <a href="https://tactiqfutbol.es/index.html?plan=analista" class="pbtn pbtn-w" id="btn-analista">Elegir Analista</a>
       </div>
       <div class="plan">
         <div class="pname">Élite</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div><span class="pamt">15€</span> <span class="pper">/mes</span></div>
-          <img src="plan-icon-elite.png" width="44" height="44" alt="" style="opacity:0.85;flex-shrink:0;"/>
+        <div>
+          <span class="pamt pamt-mensual">15€</span>
+          <span class="pamt pamt-anual">129€</span>
+          <span class="pper pper-mensual">/mes</span>
+          <span class="pper pper-anual" style="display:none">/año</span>
         </div>
+        <div class="psaving">Ahorras 51€ respecto al mensual</div>
         <div class="pdesc">Máximo rendimiento para los más competitivos</div>
         <div class="ppartidos"><div class="ppartidos-n">10 partidos</div><div class="ppartidos-l">por mes</div></div>
         <div class="pdiv"></div>
@@ -968,17 +1013,17 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
           <li class="pf"><div class="pchk"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6.5L7 1.5" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>Acceso prioritario a beta</li>
           <li class="pf"><div class="pchk"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6.5L7 1.5" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>Soporte directo por WhatsApp</li>
         </ul>
-        <a href="https://tactiqfutbol.es/index-app.html?plan=elite" class="pbtn pbtn-g">Elegir Élite</a>
+        <a href="https://tactiqfutbol.es/index.html?plan=elite" class="pbtn pbtn-g" id="btn-elite">Elegir Élite</a>
       </div>
     </div>
-    <p class="pfooter" style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:18px;">¿Dudas? <a href="https://tactiqfutbol.es/index-app.html" style="color:var(--gl);font-weight:600;text-decoration:underline;text-underline-offset:3px;">Empieza con el partido gratis</a> — sin tarjeta, sin compromiso.</p>
+    <p class="pfooter">¿Dudas? <a href="https://tactiqfutbol.es/index.html">Empieza con el partido gratis</a> — sin tarjeta, sin compromiso.</p>
   </div>
 </section>
 
 <!-- TESTIMONIOS — fondo oscuro, tarjetas inkl -->
 <section class="sec-dark" id="testimonios">
   <div class="inn">
-    <div class="sec-lbl-dark rev">Testimonios</div>
+    <div class="sec-lbl-dark rev">04 / Testimonios</div>
     <h2 class="sh-dark rev"><strong>Lo que dicen</strong> <span class="dim">los entrenadores</span></h2>
     <div class="tg">
       <div class="testi"><div class="stars">★★★★★</div><p class="ttxt">Por fin una herramienta de análisis que puedo usar yo solo, en casa, viendo el vídeo del partido tranquilamente.</p><div class="tauth"><div class="tav">CM</div><div><div class="tname">Carlos M.</div><div class="trole">Entrenador juvenil · Aragón</div></div></div></div>
@@ -992,14 +1037,15 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
 <!-- FAQ — fondo oscuro -->
 <section class="sec-faq" id="faq">
   <div class="inn" style="border-top:.5px solid rgba(29,158,117,.1)">
-    <div class="sec-lbl-dark rev" style="display:block;text-align:center">FAQ</div>
+    <div class="sec-lbl-dark rev" style="display:block;text-align:center">05 / FAQ</div>
     <h2 class="sh-dark rev" style="text-align:center;margin-bottom:28px"><strong>Preguntas</strong> <span class="dim">frecuentes</span></h2>
     <div class="faq">
       <div class="fitem"><button class="fq" onclick="tf(this)">¿Necesito instalar algo?<span class="fic">+</span></button><div class="fa-ans"><p>No. Funciona completamente en el navegador. Abre la web desde cualquier dispositivo y ya está.</p></div></div>
       <div class="fitem"><button class="fq" onclick="tf(this)">¿Con qué cámara grabo el partido?<span class="fic">+</span></button><div class="fa-ans"><p>Con cualquiera. GoPro, Veo, cámara de la instalación, móvil… Súbelo a YouTube (puede ser oculto) y pega la URL en la plataforma. Eso es todo.</p></div></div>
       <div class="fitem"><button class="fq" onclick="tf(this)">¿En qué consiste el partido gratis?<span class="fic">+</span></button><div class="fa-ans"><p>Al registrarte tienes 1 partido de prueba completo sin tarjeta: etiquetado, análisis, chat IA (10 preguntas) y compartir el resumen. Si convence, eliges plan.</p></div></div>
       <div class="fitem"><button class="fq" onclick="tf(this)">¿Qué tan bueno es el análisis de la IA?<span class="fic">+</span></button><div class="fa-ans"><p>La IA recibe el partido completo: cada evento, su minuto, jugador, zona, secuencias previas a gol y pressing. Respuestas tácticas concretas de tu partido, no genéricas.</p></div></div>
-      <div class="fitem"><button class="fq" onclick="tf(this)">¿Puedo cancelar cuando quiera?<span class="fic">+</span></button><div class="fa-ans"><p>Sí. Sin permanencia. Cancelas en cualquier momento y mantienes el acceso hasta el final del período pagado.</p></div></div>
+      <div class="fitem"><button class="fq" onclick="tf(this)">¿Puedo cancelar cuando quiera?<span class="fic">+</span></button><div class="fa-ans"><p>Sí. Sin permanencia. Los planes mensuales puedes cancelarlos cuando quieras y mantienes el acceso hasta el final del período pagado. Los planes anuales no se pueden cambiar a mensual antes de que venzan, pero puedes cancelar la renovación automática en cualquier momento.</p></div></div>
+      <div class="fitem"><button class="fq" onclick="tf(this)">¿Qué tipo de vídeo de YouTube necesito?<span class="fic">+</span></button><div class="fa-ans"><p>El vídeo debe ser <strong>público u oculto</strong> en YouTube. Los vídeos privados no se pueden cargar — YouTube bloquea el acceso a terceros. La opción "oculto" funciona igual que público para la app, pero nadie lo encontrará buscando en YouTube.</p></div></div>
     </div>
   </div>
 </section>
@@ -1011,7 +1057,7 @@ footer{padding:26px 5vw;border-top:.5px solid rgba(29,158,117,.2);background:var
     <h2>Lee el partido. Analiza.<br><span class="hl">Gana el siguiente.</span></h2>
     <div class="cta-sub">Read the game. Own the data.</div>
     <p>Tu primer partido es gratis. Sin tarjeta. Sin compromiso.</p>
-    <a href="https://tactiqfutbol.es/index-app.html" class="btn btn-lg" style="background:linear-gradient(180deg,#1A3328 0%,#0B1F17 50%,#060f0b 100%);color:var(--wh);font-weight:700;box-shadow:0 4px 0 #030806,0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(93,202,165,.15);border:.5px solid rgba(93,202,165,.2);text-shadow:0 1px 2px rgba(0,0,0,.4)">Analizar mi primer partido — gratis</a>
+    <a href="https://tourmaline-lily-720d5b.netlify.app/index.html" class="btn btn-lg" style="background:linear-gradient(180deg,#1A3328 0%,#0B1F17 50%,#060f0b 100%);color:var(--wh);font-weight:700;box-shadow:0 4px 0 #030806,0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(93,202,165,.15);border:.5px solid rgba(93,202,165,.2);text-shadow:0 1px 2px rgba(0,0,0,.4)">Analizar mi primer partido — gratis</a>
     <div class="cbadges">
       <div class="cb"><svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4.5L3.2 7.5L8 1.5" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Sin instalación</div>
       <div class="cb"><svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4.5L3.2 7.5L8 1.5" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Cualquier entrenador</div>
@@ -1140,6 +1186,47 @@ function jStartAuto(){
   clearTimeout(jTimer);
   if(!jAuto)return;
   jTimer=setTimeout(()=>{jCur=(jCur+1)%6;jRender();jStartAuto()},5000);
+}
+
+/* ── Toggle mensual/anual ── */
+let _billing = 'mensual';
+const _urls = {
+  mensual: {
+    entrenador: 'https://tactiqfutbol.es/index.html?plan=entrenador',
+    analista:   'https://tactiqfutbol.es/index.html?plan=analista',
+    elite:      'https://tactiqfutbol.es/index.html?plan=elite'
+  },
+  anual: {
+    entrenador: 'https://tactiqfutbol.es/index.html?plan=entrenador-anual',
+    analista:   'https://tactiqfutbol.es/index.html?plan=analista-anual',
+    elite:      'https://tactiqfutbol.es/index.html?plan=elite-anual'
+  }
+};
+
+function setBilling(modo){
+  _billing = modo;
+  const track = document.getElementById('billing-track');
+  const lblM  = document.getElementById('lbl-mensual');
+  const lblA  = document.getElementById('lbl-anual');
+  if(modo === 'anual'){
+    document.body.classList.add('modo-anual');
+    track.classList.add('anual');
+    lblM.classList.remove('active');
+    lblA.classList.add('active');
+  } else {
+    document.body.classList.remove('modo-anual');
+    track.classList.remove('anual');
+    lblA.classList.remove('active');
+    lblM.classList.add('active');
+  }
+  // Actualizar URLs de los botones
+  document.getElementById('btn-entrenador').href = _urls[_billing].entrenador;
+  document.getElementById('btn-analista').href   = _urls[_billing].analista;
+  document.getElementById('btn-elite').href      = _urls[_billing].elite;
+}
+
+function toggleBilling(){
+  setBilling(_billing === 'mensual' ? 'anual' : 'mensual');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{

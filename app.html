@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>tactiq — football intelligence</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- Google Analytics — reemplaza G-XXXXXXXXXX con tu ID real -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <body>
 
@@ -488,7 +492,6 @@ html,body{height:100%;overflow:hidden;}
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7aaa88" stroke-width="1"/><text x="7" y="11" text-anchor="middle" font-size="8" fill="#7aaa88" font-family="Inter" font-weight="600">?</text></svg>
       Cómo etiquetar
     </button>
-    <button onclick="abrirFAQ()" style="height:28px;width:28px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:#7a9a86;cursor:pointer;transition:all 0.15s;margin-left:4px;" onmouseover="this.style.color='#c8ddd0';this.style.borderColor='rgba(255,255,255,0.25)'" onmouseout="this.style.color='#7a9a86';this.style.borderColor='rgba(255,255,255,0.12)'" title="Preguntas frecuentes">FAQ</button>
 
 
     <!-- INFO PARTIDO — centro, solo visible cuando hay datos -->
@@ -518,8 +521,8 @@ html,body{height:100%;overflow:hidden;}
         <span style="font-size:10px;color:#c8ddd0;font-weight:500;" id="user-display">...</span>
       </div>
 
-      <!-- botón gestionar plan — solo visible para planes de pago -->
-      <button onclick="gestionarPlan()" id="btn-gestionar-plan" style="display:none;height:28px;padding:0 10px;border-radius:6px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.25);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#5DCAA5;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(29,158,117,0.16)'" onmouseout="this.style.background='rgba(29,158,117,0.08)'">
+      <!-- botón gestionar plan -->
+      <button onclick="gestionarPlan()" id="btn-gestionar-plan" style="height:28px;padding:0 10px;border-radius:6px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.25);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#5DCAA5;cursor:pointer;transition:all 0.15s;display:none;" onmouseover="this.style.background='rgba(29,158,117,0.16)'" onmouseout="this.style.background='rgba(29,158,117,0.08)'">
         Gestionar plan
       </button>
 
@@ -538,7 +541,7 @@ html,body{height:100%;overflow:hidden;}
       <div class="panel-hdr">
         <div class="panel-hdr-dot"></div>
         <span class="panel-hdr-title">Vídeo</span>
-        <input class="url-inp" id="yt-url" placeholder="URL YouTube (público u oculto)"/>
+        <input class="url-inp" id="yt-url" placeholder="URL YouTube"/>
         <button class="btn-play" onclick="loadVideo()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polygon points="4,2 10,6 4,10" fill="white"/></svg>
         </button>
@@ -549,6 +552,7 @@ html,body{height:100%;overflow:hidden;}
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#1D9E75" stroke-width="1" opacity="0.25"/><polygon points="10,8 17,12 10,16" fill="#1D9E75" opacity="0.3"/></svg>
           <p>Introduce una URL de YouTube para cargar el vídeo</p>
           <p style="font-size:9px;color:#6a9a7a;margin-top:6px;">⚠ Si el vídeo no carga, desactiva el bloqueador de anuncios para esta página</p>
+          <p style="font-size:9px;color:#6a9a7a;margin-top:4px;">🔒 El vídeo debe ser <strong style="color:#a8c4b0;">público u oculto</strong> en YouTube — los privados no se pueden cargar</p>
         </div>
       </div>
     </div>
@@ -1041,8 +1045,31 @@ function _buildPlayer(videoId){
       controls:1,
       origin: window.location.origin
     },
-    events:{ onReady: onPlayerReady, onStateChange: onPlayerStateChange }
+    events:{ onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
   });
+}
+
+function onPlayerError(event){
+  // Códigos de error YouTube: 2=parámetro inválido, 5=HTML5, 100=no encontrado/privado, 101/150=embedding bloqueado
+  const cod = event.data;
+  let msg = 'No se pudo cargar el vídeo.';
+  if(cod === 100){
+    msg = '⚠ Vídeo no encontrado o eliminado. Comprueba que la URL es correcta.';
+  } else if(cod === 101 || cod === 150){
+    msg = '⚠ Este vídeo es privado o no permite incrustarse. Cámbialo a "Oculto" o "Público" en YouTube.';
+  } else if(cod === 2){
+    msg = '⚠ URL de YouTube no válida. Copia la URL directamente desde el navegador.';
+  }
+  const wrap = document.getElementById('video-wrap');
+  if(wrap){
+    wrap.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;">
+        <div style="font-size:24px;">🎬</div>
+        <div style="font-size:12px;font-weight:600;color:#f87171;">${msg}</div>
+        <div style="font-size:10px;color:#6a9a7a;line-height:1.5;">Los vídeos deben ser <strong style="color:#a8c4b0;">públicos u ocultos</strong> en YouTube.<br>Los vídeos privados no se pueden cargar.</div>
+        <button onclick="document.getElementById('yt-url').value='';document.getElementById('yt-url').focus();" style="margin-top:4px;padding:6px 14px;background:rgba(29,158,117,.15);border:.5px solid rgba(93,202,165,.3);color:var(--green-light);border-radius:99px;font-size:10px;cursor:pointer;font-family:'Inter',sans-serif;">Cambiar URL</button>
+      </div>`;
+  }
 }
 
 // ── Estado partido ──────────────────────────────────────────────────
@@ -1492,7 +1519,7 @@ function loadVideo(){
   if(!url) return;
   const ytId = extractYTId(url);
   if(!ytId){
-    document.getElementById('video-wrap').innerHTML = `<div class="vid-ph" style="padding:16px;text-align:center;"><p style="color:#f87171;font-size:12px;font-weight:600;margin-bottom:6px;">URL no reconocida</p><p style="color:#8aaa96;font-size:11px;line-height:1.6;">Comprueba que la URL es de YouTube y que el vídeo es <strong style="color:#c8ddd0;">público u oculto</strong> — los vídeos privados no se pueden cargar.</p></div>`;
+    document.getElementById('video-wrap').innerHTML = `<div class="vid-ph"><p style="color:#7a3030;">URL de YouTube no reconocida.</p></div>`;
     return;
   }
   // Deshabilitar botón — ya no se puede volver a cargar
@@ -2050,49 +2077,38 @@ function registrarPartido(){
     async () => {
       const { usados, limite, restantes, plan } = await cargarContador();
       if(restantes <= 0){
+        const planSuperior = plan === 'trial' ? 'entrenador' : plan === 'entrenador' ? 'analista' : plan === 'analista' ? 'elite' : null;
+        const precioSuperior = { entrenador:'9€/mes', analista:'12€/mes', elite:'15€/mes' };
+        const partidosSuperior = { entrenador:'3 partidos', analista:'5 partidos', elite:'10 partidos' };
+
+        let upsellHtml = '';
         if(plan === 'trial'){
-          // Modal especial trial — muestra planes directamente
-          const modalTrial = document.createElement('div');
-          modalTrial.id = 'modal-trial-fin';
-          modalTrial.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-          modalTrial.innerHTML = `
-            <div onclick="event.stopPropagation()" style="background:#0e1210;border:1px solid #1e2d24;border-radius:16px;padding:28px 24px;max-width:380px;width:100%;font-family:'Inter',sans-serif;">
-              <div style="text-align:center;margin-bottom:20px;">
-                <div style="font-size:32px;margin-bottom:10px;">⚽</div>
-                <div style="font-size:17px;font-weight:700;color:#e8f0ec;letter-spacing:-0.3px;">Tu partido de prueba ha acabado</div>
-                <div style="font-size:12px;color:#5a7a66;margin-top:6px;line-height:1.5;">Has completado el análisis gratuito.<br>Elige un plan para seguir analizando tus partidos.</div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-                <div onclick="document.getElementById('modal-trial-fin').remove();irACheckout('entrenador')" style="background:#0a1109;border:1px solid #1e2d24;border-radius:10px;padding:12px 16px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(29,158,117,0.4)'" onmouseout="this.style.borderColor='#1e2d24'">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div style="font-size:13px;font-weight:700;color:#e8f0ec;">Entrenador</div>
-                    <div><span style="font-size:16px;font-weight:800;color:#1D9E75;">9€</span><span style="font-size:10px;color:#5a7a66;">/mes</span></div>
-                  </div>
-                  <div style="font-size:10px;color:#5a7a66;margin-top:3px;">3 partidos · 10 preguntas IA</div>
-                </div>
-                <div onclick="document.getElementById('modal-trial-fin').remove();irACheckout('analista')" style="background:#0F6E56;border:1.5px solid #1D9E75;border-radius:10px;padding:12px 16px;cursor:pointer;position:relative;transition:all 0.15s;" onmouseover="this.style.background='#1a5c48'" onmouseout="this.style.background='#0F6E56'">
-                  <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#1D9E75;color:white;font-size:9px;font-weight:700;padding:2px 10px;border-radius:99px;white-space:nowrap;">MÁS POPULAR</div>
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div style="font-size:13px;font-weight:700;color:#fff;">Analista</div>
-                    <div><span style="font-size:16px;font-weight:800;color:#fff;">12€</span><span style="font-size:10px;color:rgba(255,255,255,0.5);">/mes</span></div>
-                  </div>
-                  <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:3px;">5 partidos · 20 preguntas IA · historial temporada</div>
-                </div>
-                <div onclick="document.getElementById('modal-trial-fin').remove();irACheckout('elite')" style="background:#0a1109;border:1px solid #1e2d24;border-radius:10px;padding:12px 16px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(93,202,165,0.4)'" onmouseout="this.style.borderColor='#1e2d24'">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div style="font-size:13px;font-weight:700;color:#e8f0ec;">Élite</div>
-                    <div><span style="font-size:16px;font-weight:800;color:#5DCAA5;">15€</span><span style="font-size:10px;color:#5a7a66;">/mes</span></div>
-                  </div>
-                  <div style="font-size:10px;color:#5a7a66;margin-top:3px;">10 partidos · 30 preguntas IA · PDF export</div>
-                </div>
-              </div>
-              <button onclick="document.getElementById('modal-trial-fin').remove()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid #1e2d24;border-radius:8px;padding:9px;font-family:'Inter',sans-serif;font-size:11px;color:#5a7a66;cursor:pointer;">Ahora no</button>
+          upsellHtml = `
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+              <a href="index-app.html?plan=entrenador" style="display:block;padding:10px;background:rgba(29,158,117,0.12);border:1px solid rgba(93,202,165,0.3);border-radius:8px;text-decoration:none;text-align:center;">
+                <div style="font-size:11px;font-weight:700;color:#5DCAA5;">Plan Entrenador — 9€/mes</div>
+                <div style="font-size:10px;color:#8BA89E;margin-top:2px;">3 partidos al mes · 10 preguntas IA</div>
+              </a>
+              <a href="index-app.html?plan=analista" style="display:block;padding:10px;background:rgba(29,158,117,0.18);border:1px solid rgba(93,202,165,0.5);border-radius:8px;text-decoration:none;text-align:center;">
+                <div style="font-size:11px;font-weight:700;color:#fff;">Plan Analista — 12€/mes ⭐ más popular</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px;">5 partidos al mes · 20 preguntas IA · historial completo</div>
+              </a>
             </div>`;
-          document.body.appendChild(modalTrial);
-        } else {
-          const msg = `Has usado los ${limite} partidos de tu plan este mes.<br><br>Actualiza tu plan para continuar analizando.`;
-          showModalAlert('Límite alcanzado', msg);
+        } else if(planSuperior){
+          upsellHtml = `
+            <div style="margin-top:12px;padding:10px;background:rgba(29,158,117,0.1);border:1px solid rgba(93,202,165,0.3);border-radius:8px;text-align:center;">
+              <div style="font-size:10px;color:#8BA89E;margin-bottom:6px;">O sube al plan superior:</div>
+              <a href="index-app.html?plan=${planSuperior}" style="text-decoration:none;">
+                <div style="font-size:12px;font-weight:700;color:#5DCAA5;">${planSuperior.charAt(0).toUpperCase()+planSuperior.slice(1)} — ${precioSuperior[planSuperior]}</div>
+                <div style="font-size:10px;color:#8BA89E;margin-top:2px;">${partidosSuperior[planSuperior]} al mes</div>
+              </a>
+            </div>`;
         }
+
+        const msg = plan === 'trial'
+          ? `Has usado tu partido de prueba gratuito. Elige un plan para seguir analizando.${upsellHtml}`
+          : `Has usado los ${limite} partidos de tu plan este mes.${upsellHtml}`;
+        showModalAlert('Límite alcanzado', msg);
         return;
       }
       const partidoData = {
@@ -2268,40 +2284,42 @@ const PLAN_LIMITES = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
   // Cargar perfil y contador de partidos
   await cargarContador();
 
-  // Manejar vuelta desde Stripe
-  const params = new URLSearchParams(window.location.search);
-  const pago = params.get('pago');
-  if (pago === 'ok') {
-    // Limpiar la URL sin recargar
-    window.history.replaceState({}, '', '/app.html');
-    // Pequeño delay — el webhook puede necesitar 1-2s para actualizar el plan
-    setTimeout(async () => {
-      await cargarContador();
+  // ── Modal bienvenida post-pago ────────────────
+  const urlParams = new URLSearchParams(window.location.search);
+  const pagoOk = urlParams.get('pago') === 'ok';
+  const yaVisto = sessionStorage.getItem('bienvenida_mostrada');
+  if(pagoOk && !yaVisto && _perfil){
+    sessionStorage.setItem('bienvenida_mostrada','1');
+    // Limpiar el ?pago=ok de la URL sin recargar
+    window.history.replaceState({}, '', 'app.html');
+    const plan = _perfil.plan || 'entrenador';
+    const planLabel = { entrenador:'Entrenador', analista:'Analista', elite:'Élite' }[plan] || plan;
+    const partidos  = { entrenador:'3', analista:'5', elite:'10' }[plan] || '3';
+    const preguntas = { entrenador:'10', analista:'20', elite:'30' }[plan] || '10';
+    const extras    = plan === 'elite' ? '<li style="color:#5DCAA5;">✓ Exportación PDF de análisis</li>' : '';
+    const historial = plan === 'entrenador' ? 'Ciclo actual (30 días)' : 'Temporada completa';
+    setTimeout(() => {
       showModalAlert(
-        '¡Pago completado! ⚡',
-        'Tu plan ya está activo. Si el contador aún no se ha actualizado, espera unos segundos y recarga la página.'
+        `🎉 ¡Ya eres ${planLabel}!`,
+        `<div style="text-align:left;line-height:1.8;">
+          <p style="color:#8BA89E;font-size:11px;margin-bottom:10px;">Esto es lo que tienes a partir de ahora:</p>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#c8ddd0;">
+            <li>✓ <strong>${partidos} partidos</strong> al mes para analizar</li>
+            <li>✓ <strong>${preguntas} preguntas IA</strong> por partido</li>
+            <li>✓ Historial: ${historial}</li>
+            <li>✓ Campogramas, mapas de calor y gráficas</li>
+            <li>✓ Modo Vestuario</li>
+            ${extras}
+          </ul>
+          <p style="margin-top:12px;font-size:11px;color:#6a9a7a;">Empieza cargando tu primer partido arriba. 👆</p>
+        </div>`
       );
-    }, 2000);
-  } else if (pago === 'cancelado') {
-    window.history.replaceState({}, '', '/app.html');
-    // No mostrar nada — el usuario canceló voluntariamente
+    }, 800);
   }
-
-  // Tutorial primera vez — pequeño delay para que la UI esté lista
-  setTimeout(iniciarTutorialSiProcede, 800);
 })();
 
 async function cargarContador(){
-  let perfil = null;
-  try {
-    const { data, error } = await sb.from('perfiles').select('*').eq('id', _currentUser.id).single();
-    if(error) throw error;
-    perfil = data;
-  } catch(e) {
-    console.error('Error cargando perfil:', e);
-    const counter = document.getElementById('match-counter');
-    if(counter){ counter.textContent = 'Error de conexión'; counter.style.color = '#f87171'; }
-  }
+  const { data: perfil } = await sb.from('perfiles').select('*').eq('id', _currentUser.id).single();
   _perfil = perfil;
 
   const plan = perfil?.plan || 'entrenador';
@@ -2318,14 +2336,12 @@ async function cargarContador(){
     usados = count || 0;
     restantes = Math.max(0, limite - usados);
   } else {
-    // Usar plan_renovado_en si existe (fecha de último pago/renovación Stripe)
-    // Si no existe, caer en created_at como antes
-    const baseRenovacion = perfil?.plan_renovado_en || perfil?.created_at || new Date().toISOString();
-    const fechaBase = new Date(baseRenovacion);
+    const registro = new Date(perfil?.created_at || Date.now());
     const ahora = new Date();
-    const ciclosCompletos = Math.floor((ahora - fechaBase) / (30*24*60*60*1000));
-    const inicioCiclo = new Date(fechaBase.getTime() + ciclosCompletos * 30*24*60*60*1000);
+    const ciclosCompletos = Math.floor((ahora - registro) / (30*24*60*60*1000));
+    const inicioCiclo = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
 
+    // Contar partidos en el ciclo actual
     const { count } = await sb.from('partidos')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', _currentUser.id)
@@ -2334,18 +2350,17 @@ async function cargarContador(){
     restantes = Math.max(0, limite - usados);
   }
 
-  // Actualizar topbar contador
+  // Actualizar topbar
   const counter = document.getElementById('match-counter');
   if(counter){
     counter.textContent = `${usados} / ${limite} partidos`;
     counter.style.color = restantes === 0 ? '#f87171' : restantes === 1 ? '#fcd34d' : '#8aaa96';
   }
 
-  // Mostrar botón "Gestionar plan" solo si tiene suscripción de pago activa
+  // Mostrar botón gestionar plan solo si tiene suscripción de pago
   const btnGestionar = document.getElementById('btn-gestionar-plan');
-  if(btnGestionar){
-    const tieneStripe = !!(perfil?.stripe_customer_id);
-    btnGestionar.style.display = (plan !== 'trial' && tieneStripe) ? 'block' : 'none';
+  if(btnGestionar && plan !== 'trial'){
+    btnGestionar.style.display = 'block';
   }
 
   return { usados, limite, restantes, plan };
@@ -2495,16 +2510,14 @@ async function irACheckout(plan){
   btn.style.pointerEvents = 'none';
 
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    if(!session) throw new Error('Sin sesión');
-
     const res = await fetch('/.netlify/functions/crear-checkout', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({ plan })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan,
+        email: _currentUser.email,
+        userId: _currentUser.id
+      })
     });
     const data = await res.json();
     if(data.url){
@@ -2515,7 +2528,7 @@ async function irACheckout(plan){
   } catch(e) {
     btn.innerHTML = originalHTML;
     btn.style.pointerEvents = '';
-    showModalAlert('Error', 'No se pudo iniciar el pago. Inténtalo de nuevo o escríbenos a soporte@tactiqfutbol.es');
+    showModalAlert('Error', 'No se pudo iniciar el pago. Inténtalo de nuevo.');
   }
 }
 
@@ -2527,151 +2540,18 @@ window.addEventListener('pageshow', function(e){
   });
 });
 
-
-// ══════════════════════════════════════════════
-// TUTORIAL WALKTHROUGH — primera vez
-// ══════════════════════════════════════════════
-const TUTORIAL_STEPS = [
-  {
-    target: 'yt-url',
-    title: 'Paso 1 · Carga el vídeo',
-    text: 'Pega aquí la URL de YouTube del partido. El vídeo debe ser público u oculto — los privados no funcionan. Pulsa Enter o el botón de play.',
-    position: 'bottom'
-  },
-  {
-    target: 'etiq-panel',
-    title: 'Paso 2 · Rellena los datos del partido',
-    text: 'Introduce el nombre de los equipos, jornada, fecha y formación. Solo necesitas hacerlo una vez — la plantilla se guarda automáticamente.',
-    position: 'right'
-  },
-  {
-    target: 'match-counter',
-    title: 'Paso 3 · Tu contador de partidos',
-    text: 'Aquí ves cuántos partidos te quedan disponibles en tu plan este mes.',
-    position: 'bottom'
-  },
-  {
-    target: 'btn-gestionar-plan',
-    title: 'Paso 4 · Gestiona tu suscripción',
-    text: 'Desde aquí puedes cambiar de plan, actualizar tu tarjeta o cancelar cuando quieras.',
-    position: 'bottom',
-    skipIfHidden: true
-  }
-];
-
-let _tutorialStep = 0;
-let _tutorialOverlay = null;
-let _tutorialBox = null;
-
-async function iniciarTutorialSiProcede() {
-  if(!_currentUser) return;
-  // Verificar en Supabase si ya ha visto el tutorial
-  try {
-    const { data } = await sb.from('perfiles').select('tutorial_done').eq('id', _currentUser.id).single();
-    if(data?.tutorial_done) return; // ya lo vio
-    mostrarPasoTutorial(0);
-  } catch(e) {
-    // Si falla, no mostramos el tutorial — no interrumpimos la app
-  }
+async function doLogout(){
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
 }
 
-function mostrarPasoTutorial(step) {
-  // Limpiar paso anterior
-  limpiarTutorial();
-
-  const pasos = TUTORIAL_STEPS.filter(s => {
-    if(s.skipIfHidden) {
-      const el = document.getElementById(s.target);
-      return el && el.style.display !== 'none' && el.offsetParent !== null;
-    }
-    return true;
-  });
-
-  if(step >= pasos.length) {
-    finalizarTutorial();
-    return;
-  }
-
-  _tutorialStep = step;
-  const paso = pasos[step];
-  const target = document.getElementById(paso.target);
-  if(!target) { mostrarPasoTutorial(step + 1); return; }
-
-  const rect = target.getBoundingClientRect();
-
-  // Overlay semitransparente
-  _tutorialOverlay = document.createElement('div');
-  _tutorialOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9990;';
-  _tutorialOverlay.onclick = () => mostrarPasoTutorial(step + 1);
-  document.body.appendChild(_tutorialOverlay);
-
-  // Recorte iluminado del target
-  const highlight = document.createElement('div');
-  highlight.style.cssText = `position:fixed;z-index:9991;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,0.55),0 0 0 2px #1D9E75;pointer-events:none;transition:all 0.3s;left:${rect.left - 4}px;top:${rect.top - 4}px;width:${rect.width + 8}px;height:${rect.height + 8}px;`;
-  document.body.appendChild(highlight);
-  _tutorialOverlay._highlight = highlight;
-
-  // Caja del tooltip
-  _tutorialBox = document.createElement('div');
-  _tutorialBox.style.cssText = 'position:fixed;z-index:9992;background:#0e1210;border:1.5px solid #1D9E75;border-radius:10px;padding:16px 18px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6);font-family:Inter,sans-serif;';
-
-  // Posición del tooltip
-  const boxW = 280, boxH = 140;
-  let left, top;
-  if(paso.position === 'bottom') {
-    left = Math.min(rect.left, window.innerWidth - boxW - 16);
-    top = rect.bottom + 12;
-  } else {
-    left = rect.right + 12;
-    top = Math.min(rect.top, window.innerHeight - boxH - 16);
-  }
-  left = Math.max(12, left);
-  top = Math.max(12, top);
-  _tutorialBox.style.left = left + 'px';
-  _tutorialBox.style.top = top + 'px';
-
-  _tutorialBox.innerHTML = `
-    <div style="font-size:9px;color:#5DCAA5;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;font-family:'Courier New',monospace;">${paso.title}</div>
-    <div style="font-size:12px;color:#c8ddd0;line-height:1.6;margin-bottom:14px;">${paso.text}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:10px;color:#5a7a66;">${step + 1} de ${pasos.length}</span>
-      <div style="display:flex;gap:8px;">
-        <button onclick="finalizarTutorial()" style="background:transparent;border:1px solid #2a3d30;border-radius:6px;padding:5px 12px;font-size:11px;color:#5a7a66;cursor:pointer;font-family:Inter,sans-serif;">Saltar</button>
-        <button onclick="mostrarPasoTutorial(${step + 1})" style="background:#1D9E75;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;font-family:Inter,sans-serif;">${step + 1 >= pasos.length ? 'Listo ✓' : 'Siguiente →'}</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(_tutorialBox);
-}
-
-function limpiarTutorial() {
-  if(_tutorialOverlay) {
-    if(_tutorialOverlay._highlight) _tutorialOverlay._highlight.remove();
-    _tutorialOverlay.remove();
-    _tutorialOverlay = null;
-  }
-  if(_tutorialBox) { _tutorialBox.remove(); _tutorialBox = null; }
-}
-
-async function finalizarTutorial() {
-  limpiarTutorial();
-  // Marcar como visto en Supabase
-  try {
-    await sb.from('perfiles').update({ tutorial_done: true }).eq('id', _currentUser.id);
-  } catch(e) { /* si falla no pasa nada */ }
-}
-
-function abrirFAQ(){ document.getElementById('modal-faq-overlay').classList.remove('hidden'); }
-function cerrarFAQ(){ document.getElementById('modal-faq-overlay').classList.add('hidden'); }
-
+// ── Gestionar plan — portal de Stripe ─────────
 async function gestionarPlan(){
   const btn = document.getElementById('btn-gestionar-plan');
   if(btn){ btn.textContent = 'Cargando...'; btn.disabled = true; }
 
   try {
     const { data: { session } } = await sb.auth.getSession();
-    if(!session) throw new Error('Sin sesión');
-
     const res = await fetch('/.netlify/functions/portal-stripe', {
       method: 'POST',
       headers: {
@@ -2691,41 +2571,6 @@ async function gestionarPlan(){
     if(btn){ btn.textContent = 'Gestionar plan'; btn.disabled = false; }
   }
 }
-
-async function doLogout(){
-  await sb.auth.signOut();
-  window.location.href = 'index.html';
-}
 </script>
-
-<!-- MODAL FAQ -->
-<div class="modal-overlay hidden" id="modal-faq-overlay" onclick="cerrarFAQ()">
-  <div onclick="event.stopPropagation()" style="background:#0e1210;border:1px solid #1e2d24;border-radius:14px;padding:24px;max-width:440px;width:94%;max-height:80vh;overflow-y:auto;font-family:'Inter',sans-serif;box-shadow:0 24px 60px rgba(0,0,0,0.8);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-      <div style="font-size:14px;font-weight:700;color:#e8f0ec;">Preguntas frecuentes</div>
-      <button onclick="cerrarFAQ()" style="background:none;border:none;color:#5a7a66;font-size:18px;cursor:pointer;line-height:1;">✕</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Qué vídeos puedo usar?</div>
-        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Cualquier vídeo de YouTube — grabado con móvil, GoPro, Veo o cualquier cámara. El vídeo debe ser <strong style="color:#c8ddd0;">público u oculto</strong>. Los vídeos privados no funcionan.</div>
-      </div>
-      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Puedo pausar y retomar el etiquetado?</div>
-        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Sí. El progreso se guarda en el navegador. Si cierras y vuelves a abrir la app, el partido seguirá donde lo dejaste mientras no limpies el caché.</div>
-      </div>
-      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Qué pasa cuando llego al límite de partidos?</div>
-        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">El contador se reinicia cada 30 días desde tu fecha de registro. Si necesitas más partidos puedes actualizar tu plan en cualquier momento.</div>
-      </div>
-      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Cómo funciona la IA táctica?</div>
-        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Cuando terminas de etiquetar y registras el partido, puedes acceder al análisis completo y chatear con la IA. Solo usa los datos reales de tu partido — nunca inventa.</div>
-      </div>
-      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Puedo cancelar cuando quiera?</div>
-        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Sí, sin permanencia. Pulsa "Gestionar plan" en la barra superior y cancela desde el portal. Mantienes el acceso hasta el final del período pagado.</div>
-      </div>
-      <div style="background:#0a1109;border:1px solid #1e2d24;border-radius:8px;padding:12px 14px;">
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">¿Tengo algún problema? ¿A quién escribo?</div>
-        <div style="font-size:11px;color:#8aaa96;line-height:1.6;">Escríbenos a <a href="/cdn-cgi/l/email-protection#b0c3dfc0dfc2c4d5f0c4d1d3c4d9c1d6c5c4d2dfdc9ed5c3" style="color:#1D9E75;text-decoration:none;"><span class="__cf_email__" data-cfemail="d0a3bfa0bfa2a4b590a4b1b3a4b9a1b6a5a4b2bfbcfeb5a3">[email&#160;protected]</span></a> o a <a href="https://instagram.com/tactiqfutbol" target="_bla
+</body>
+</html>
