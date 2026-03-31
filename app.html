@@ -335,6 +335,13 @@ html,body{height:100%;overflow:hidden;}
 .popup-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;}
 .popup-msg{font-size:11px;color:var(--muted);line-height:1.5;}
 .popup-msg strong{color:#fbbf24;}
+
+/* ── Onboarding primera vez ──────────────────── */
+@keyframes tqGlow{0%,100%{border-color:rgba(29,158,117,0.6);box-shadow:0 0 0 0 rgba(29,158,117,0);}50%{border-color:#1D9E75;box-shadow:0 0 0 2px rgba(29,158,117,0.18);}}
+.url-inp.tq-onboarding{animation:tqGlow 1.8s ease-in-out infinite;}
+#onboarding-tip{position:fixed;background:#1D9E75;color:#fff;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;padding:6px 11px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:10000;box-shadow:0 4px 16px rgba(29,158,117,0.4);opacity:0;transition:opacity 0.25s ease;}
+#onboarding-tip.visible{opacity:1;}
+#onboarding-tip::before{content:'';position:absolute;top:-5px;left:14px;width:10px;height:10px;background:#1D9E75;transform:rotate(45deg);border-radius:2px;}
 </style>
 
 <!-- FLOAT PANEL -->
@@ -2345,6 +2352,9 @@ const PLAN_LIMITES = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
         </div>`
       );
     }, 800);
+  } else {
+    // Solo mostrar onboarding si no hay modal post-pago
+    setTimeout(initOnboarding, 600);
   }
 })();
 
@@ -2592,6 +2602,36 @@ async function gestionarPlan(){
     if(btn){ btn.textContent = 'Gestionar plan'; btn.disabled = false; }
   }
 }
+
+// ── Onboarding primera vez ────────────────────────────────────────────
+function initOnboarding(){
+  if(localStorage.getItem('tactiq_onboarding_done')) return;
+  const inp = document.getElementById('yt-url');
+  const tip = document.getElementById('onboarding-tip');
+  if(!inp || !tip) return;
+
+  // Posicionar debajo del input
+  const r = inp.getBoundingClientRect();
+  tip.style.left = r.left + 'px';
+  tip.style.top  = (r.bottom + 8) + 'px';
+
+  inp.classList.add('tq-onboarding');
+  requestAnimationFrame(() => tip.classList.add('visible'));
+
+  function dismiss(){
+    inp.classList.remove('tq-onboarding');
+    tip.classList.remove('visible');
+    localStorage.setItem('tactiq_onboarding_done', '1');
+    inp.removeEventListener('focus', dismiss);
+    inp.removeEventListener('input', dismiss);
+  }
+  inp.addEventListener('focus', dismiss);
+  inp.addEventListener('input', dismiss);
+  setTimeout(dismiss, 8000); // auto-desaparece a los 8s
+}
 </script>
+
+<div id="onboarding-tip">👆 Empieza aquí — pega una URL de YouTube</div>
+
 </body>
 </html>

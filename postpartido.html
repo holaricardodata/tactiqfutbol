@@ -126,6 +126,11 @@ body{display:flex;flex-direction:column;}
 .loading-dot:nth-child(2){animation-delay:0.2s;}
 .loading-dot:nth-child(3){animation-delay:0.4s;}
 @keyframes ldot{0%,80%,100%{opacity:0.2;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}
+
+/* ── Tooltip hover genérico ─────────────────── */
+.tq-tip{position:relative;}
+.tq-tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#131a16;border:1px solid #1e2d24;color:#a8c4b0;font-size:10px;font-weight:400;padding:4px 9px;border-radius:5px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s;z-index:200;}
+.tq-tip:hover::after{opacity:1;}
 </style>
 </head>
 <body>
@@ -168,7 +173,7 @@ body{display:flex;flex-direction:column;}
       <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="3" y="3" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/><rect x="6.5" y="3" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/><rect x="3" y="6.5" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/><rect x="6.5" y="6.5" width="2.5" height="2.5" fill="currentColor" opacity="0.7"/></svg>
       Vestuario
     </button>
-    <button class="btn btn-green" onclick="nuevoPartido()">+ Nuevo partido</button>
+    <button class="btn btn-green tq-tip" data-tip="Analiza otro partido desde un vídeo de YouTube" onclick="nuevoPartido()">+ Nuevo partido</button>
     <div style="display:flex;align-items:center;gap:5px;padding:0 10px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);">
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="#8aaa96" stroke-width="1.2"/><path d="M2 12c0-2.8 2.2-4 5-4s5 1.2 5 4" stroke="#8aaa96" stroke-width="1.2" stroke-linecap="round"/></svg>
       <span style="font-size:10px;color:#c8ddd0;font-weight:500;" id="user-display">...</span>
