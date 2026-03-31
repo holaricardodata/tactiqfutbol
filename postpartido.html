@@ -576,7 +576,7 @@ window.addEventListener('DOMContentLoaded', () => {
     catch(e){ partido = null; }
   }
   // Si no hay datos reales mostrar pantalla vacía
-  if(!partido || !partido.eventos){
+  if(!partido || !Array.isArray(partido.eventos)){
     partido = { local:'—', visitante:'—', eventos:[], rol:'Local', jornada:'', fecha:'', formacion:'', scoreLocal:0, scoreVisitante:0 };
   }
   setTimeout(() => {
@@ -1114,7 +1114,8 @@ async function sendChat(){
     const res = await fetch('/.netlify/functions/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${window._authToken||''}`},
-      body: JSON.stringify({ messages: chatHistory })
+      body: JSON.stringify({ messages: chatHistory }),
+      signal: AbortSignal.timeout(20000)
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
@@ -1122,10 +1123,13 @@ async function sendChat(){
     thinkingEl.querySelector('.msg-text').textContent = reply;
     chatHistory.push({ role:'assistant', content: reply });
   } catch(e) {
+    const esTimeout = e.name === 'TimeoutError' || e.name === 'AbortError';
     const esConexion = !navigator.onLine;
-    thinkingEl.querySelector('.msg-text').textContent = esConexion
-      ? 'Sin conexión a internet. Comprueba tu red e inténtalo de nuevo.'
-      : 'El análisis no está disponible en este momento. Si el problema persiste, escríbenos a soporte@tactiqfutbol.es';
+    thinkingEl.querySelector('.msg-text').textContent = esTimeout
+      ? 'El análisis tardó demasiado. Inténtalo de nuevo.'
+      : esConexion
+        ? 'Sin conexión a internet. Comprueba tu red e inténtalo de nuevo.'
+        : 'El análisis no está disponible en este momento. Si el problema persiste, escríbenos a soporte@tactiqfutbol.es';
     preguntasUsadas--; // no contar si falla
     _actualizarContadorIA();
   }

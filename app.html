@@ -2136,7 +2136,7 @@ function registrarPartido(){
       };
       localStorage.setItem('tactiq_ultimo_partido', JSON.stringify(partidoData));
       const { error } = await registrarPartidoSupabase(partidoData);
-      if(error) console.error('Error guardando partido:', error);
+      if(error) console.error('Error guardando partido:', error?.message || error?.code);
       window.location.href = 'postpartido.html';
     }
   );
@@ -2173,7 +2173,7 @@ async function guardarPlantilla(){
       formacion: plantilla.formacion,
       jugadores: plantilla
     }, { onConflict: 'user_id' });
-    if(error){ console.error('Error guardando plantilla:', error); }
+    if(error){ console.error('Error guardando plantilla:', error?.message || error?.code); }
   }
 
   showToast('✓ Plantilla guardada — ' + formacion);
@@ -2533,7 +2533,8 @@ async function irACheckout(plan){
     const res = await fetch('/.netlify/functions/crear-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ plan })
+      body: JSON.stringify({ plan }),
+      signal: AbortSignal.timeout(15000)
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || `Error ${res.status}`);
@@ -2575,7 +2576,8 @@ async function gestionarPlan(){
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
-      }
+      },
+      signal: AbortSignal.timeout(15000)
     });
     const { url, error } = await res.json();
     if(url){

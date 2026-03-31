@@ -124,7 +124,8 @@ exports.handler = async function(event) {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 400,
         messages
-      })
+      }),
+      signal: AbortSignal.timeout(20000)
     });
 
     const data = await response.json();
