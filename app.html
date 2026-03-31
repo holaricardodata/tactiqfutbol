@@ -484,6 +484,14 @@ html,body{height:100%;overflow:hidden;}
   <button onclick="abrirUpgrade()" style="padding:3px 10px;border-radius:5px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;font-size:10px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Ver planes</button>
   <button onclick="document.getElementById('banner-trial').style.display='none';sessionStorage.setItem('trial_banner_visto','1')" style="background:none;border:none;color:#a8966a;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;margin-left:4px;">✕</button>
 </div>
+<!-- BANNER PROGRESO GUARDADO -->
+<div id="banner-progreso" style="display:none;align-items:center;justify-content:center;gap:8px;background:rgba(29,158,117,0.07);border-bottom:1px solid rgba(29,158,117,0.2);padding:7px 18px;font-size:11px;color:#5DCAA5;flex-shrink:0;">
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#5DCAA5" stroke-width="1.2"/><polyline points="3.5,6 5.5,8 8.5,4" stroke="#5DCAA5" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span>Tienes un etiquetado pendiente.</span>
+  <button onclick="restaurarProgreso()" style="padding:3px 10px;border-radius:5px;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.3);color:#5DCAA5;font-size:10px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Continuar</button>
+  <button onclick="descartarProgreso()" style="padding:3px 10px;border-radius:5px;background:none;border:1px solid rgba(255,255,255,0.1);color:#8aaa96;font-size:10px;cursor:pointer;font-family:'Inter',sans-serif;">Descartar</button>
+  <button onclick="document.getElementById('banner-progreso').style.display='none'" style="background:none;border:none;color:#6a9a7a;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;margin-left:4px;">✕</button>
+</div>
 <!-- LOADING SCREEN -->
 <div class="tq-loading" id="tq-loading">
   <div class="tq-loading-logo">
@@ -556,6 +564,11 @@ html,body{height:100%;overflow:hidden;}
       <div style="display:flex;align-items:center;gap:5px;padding:0 10px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="#8aaa96" stroke-width="1.2"/><path d="M2 12c0-2.8 2.2-4 5-4s5 1.2 5 4" stroke="#8aaa96" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span style="font-size:10px;color:#c8ddd0;font-weight:500;" id="user-display">...</span>
+      </div>
+
+      <!-- chip renovación -->
+      <div id="chip-renovacion" style="display:none;height:28px;padding:0 10px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);align-items:center;">
+        <span style="font-size:10px;color:#a8c4b0;" id="chip-renovacion-txt"></span>
       </div>
 
       <!-- botón gestionar plan -->
@@ -1866,10 +1879,48 @@ function initScoreNames(){
   document.getElementById('score-visitante').textContent = '0';
 }
 
+function autoGuardarProgreso(){
+  // Solo guardar si hay un partido activo (etiq-active visible)
+  if(document.getElementById('etiq-active')?.style.display === 'none') return;
+  const progreso = {
+    eventos: eventosData,
+    local:      document.getElementById('fi-local')?.value.trim() || '',
+    visitante:  document.getElementById('fi-visitante')?.value.trim() || '',
+    jornada:    document.getElementById('fi-jornada')?.value || '',
+    fecha:      document.getElementById('fi-fecha')?.value || '',
+    formacion:  document.getElementById('fi-formacion-local')?.value || '',
+    scoreLocal, scoreVisitante,
+    ts: Date.now()
+  };
+  try { localStorage.setItem('tactiq_progreso_partido', JSON.stringify(progreso)); } catch(e){}
+}
+
+function restaurarProgreso(){
+  const raw = localStorage.getItem('tactiq_progreso_partido');
+  if(!raw) return;
+  let p;
+  try { p = JSON.parse(raw); } catch(e){ return; }
+  // Rellenar campos del formulario
+  const set = (id, val) => { const el = document.getElementById(id); if(el && val) el.value = val; };
+  set('fi-local', p.local);
+  set('fi-visitante', p.visitante);
+  set('fi-jornada', p.jornada);
+  set('fi-fecha', p.fecha);
+  set('fi-formacion-local', p.formacion);
+  document.getElementById('banner-progreso').style.display = 'none';
+  showModalAlert('✓ Progreso restaurado', 'Se han recuperado los datos del partido anterior. Revisa los campos y pulsa <strong>Iniciar partido</strong> cuando estés listo.');
+}
+
+function descartarProgreso(){
+  localStorage.removeItem('tactiq_progreso_partido');
+  document.getElementById('banner-progreso').style.display = 'none';
+}
+
 function addEventoToTable(evento){
   evento.id = eventoIdCounter++;
   eventosData.push(evento);
   renderTabla();
+  autoGuardarProgreso();
 }
 
 function addEventPin(sec, tipo, id){
@@ -2185,6 +2236,7 @@ function registrarPartido(){
         console.error('Error guardando partido:', e?.message);
       }
       localStorage.setItem('tactiq_ultimo_partido', JSON.stringify(partidoData));
+      localStorage.removeItem('tactiq_progreso_partido'); // limpiar autosave al finalizar
       window.location.href = 'postpartido.html';
     }
   );
@@ -2385,6 +2437,24 @@ const PLAN_LIMITES = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
     // Solo mostrar onboarding si no hay modal post-pago
     setTimeout(initOnboarding, 600);
   }
+
+  // Comprobar progreso guardado (solo si no hay partido activo)
+  try {
+    const raw = localStorage.getItem('tactiq_progreso_partido');
+    if(raw){
+      const p = JSON.parse(raw);
+      // Solo mostrar si hay eventos y el partido no lleva más de 48h sin guardar
+      const hace48h = Date.now() - 48 * 60 * 60 * 1000;
+      if(Array.isArray(p.eventos) && p.eventos.length > 0 && (!p.ts || p.ts > hace48h)){
+        setTimeout(()=>{
+          const bp = document.getElementById('banner-progreso');
+          if(bp) bp.style.display = 'flex';
+        }, 1200);
+      } else if(p.ts && p.ts <= hace48h){
+        localStorage.removeItem('tactiq_progreso_partido');
+      }
+    }
+  } catch(e){}
 })();
 
 async function cargarContador(){
@@ -2435,6 +2505,19 @@ async function cargarContador(){
   const btnGestionar = document.getElementById('btn-gestionar-plan');
   if(btnGestionar && plan !== 'trial'){
     btnGestionar.style.display = 'block';
+  }
+
+  // Chip de renovación (solo planes de pago con fecha conocida)
+  if(plan !== 'trial' && perfil?.plan_renovado_en){
+    const base = new Date(perfil.plan_renovado_en);
+    const ahora = new Date();
+    const ciclosCompletos = Math.floor((ahora - base) / (30*24*60*60*1000));
+    const proximaRenovacion = new Date(base.getTime() + (ciclosCompletos + 1) * 30*24*60*60*1000);
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const chipTxt = `Renueva: ${proximaRenovacion.getDate()} ${meses[proximaRenovacion.getMonth()]} ${proximaRenovacion.getFullYear()}`;
+    const chipEl = document.getElementById('chip-renovacion');
+    const chipTxtEl = document.getElementById('chip-renovacion-txt');
+    if(chipEl && chipTxtEl){ chipTxtEl.textContent = chipTxt; chipEl.style.display = 'flex'; }
   }
 
   // Banner trial agotado
