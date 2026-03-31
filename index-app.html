@@ -284,10 +284,34 @@ async function doRegister(){
 
   setLoading('btn-register', false, 'Crear cuenta →');
   const planPendiente = sessionStorage.getItem('plan_pendiente');
-  const msgExtra = planPendiente
-    ? ` Cuando entres te llevaremos al plan ${planPendiente.charAt(0).toUpperCase()+planPendiente.slice(1)} directamente.`
+  const planesValidos = ['entrenador','analista','elite'];
+  const safePlan = planesValidos.includes(planPendiente)
+    ? planPendiente.charAt(0).toUpperCase() + planPendiente.slice(1) : '';
+  const planExtra = safePlan
+    ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(29,158,117,0.2);font-size:10px;color:#5DCAA5;">→ Cuando confirmes el email, te llevaremos al plan <strong>${safePlan}</strong> directamente.</div>`
     : '';
-  showSuccess('register-success', `✓ Cuenta creada. Revisa tu email para confirmar tu cuenta antes de entrar.${msgExtra}`);
+  const regEl = document.getElementById('register-success');
+  regEl.innerHTML = `
+    <div style="text-align:left;">
+      <div style="font-weight:600;color:#5DCAA5;margin-bottom:6px;">✓ ¡Cuenta creada!</div>
+      <p style="margin-bottom:10px;color:#a8c4b0;">Revisa tu email para confirmar la cuenta. Mientras tanto, los 3 pasos para empezar:</p>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:11px;line-height:1.5;">
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <span style="background:#1D9E75;color:#fff;border-radius:50%;min-width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:2px;">1</span>
+          <span>Sube el vídeo a YouTube como <strong>oculto</strong> (no privado — los privados no se pueden cargar).</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <span style="background:#1D9E75;color:#fff;border-radius:50%;min-width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:2px;">2</span>
+          <span>Copia la URL y pégala en el input de vídeo de la app. Pulsa play para cargar.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <span style="background:#1D9E75;color:#fff;border-radius:50%;min-width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:2px;">3</span>
+          <span>Sitúa en el campo y pulsa <strong>TAG+</strong> para etiquetar jugadas. Al acabar, registra el partido para el análisis con IA.</span>
+        </div>
+      </div>
+      ${planExtra}
+    </div>`;
+  regEl.className = 'msg success show';
 }
 
 // ── RECUPERAR CONTRASEÑA ──────────────────────

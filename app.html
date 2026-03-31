@@ -336,6 +336,18 @@ html,body{height:100%;overflow:hidden;}
 .popup-msg{font-size:11px;color:var(--muted);line-height:1.5;}
 .popup-msg strong{color:#fbbf24;}
 
+/* ── Banner trial agotado ────────────────────── */
+#banner-trial{display:none;align-items:center;justify-content:center;gap:8px;background:rgba(251,191,36,0.07);border-bottom:1px solid rgba(251,191,36,0.18);padding:7px 18px;font-size:11px;color:#fbbf24;flex-shrink:0;}
+
+/* ── FAQ panel ───────────────────────────────── */
+#faq-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;}
+#faq-panel{position:fixed;top:0;right:0;height:100%;width:320px;max-width:92vw;background:#131a16;border-left:1px solid #1e2d24;z-index:2001;display:none;flex-direction:column;transform:translateX(100%);transition:transform 0.25s ease;overflow-y:auto;}
+.faq-item{border-bottom:1px solid #1e2d24;padding:14px 0;}
+.faq-item:last-child{border-bottom:none;}
+.faq-q{font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:5px;}
+.faq-a{font-size:11px;color:#8aaa96;line-height:1.6;}
+.faq-a strong{color:#a8c4b0;}
+
 /* ── Onboarding primera vez ──────────────────── */
 @keyframes tqGlow{0%,100%{border-color:rgba(29,158,117,0.6);box-shadow:0 0 0 0 rgba(29,158,117,0);}50%{border-color:#1D9E75;box-shadow:0 0 0 2px rgba(29,158,117,0.18);}}
 .url-inp.tq-onboarding{animation:tqGlow 1.8s ease-in-out infinite;}
@@ -464,6 +476,14 @@ html,body{height:100%;overflow:hidden;}
   <span>Hay un problema con tu pago. Actualiza tu método de pago para evitar perder el acceso.</span>
   <button onclick="gestionarPlan()" style="padding:4px 10px;border-radius:5px;background:#f87171;border:none;color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Actualizar pago</button>
 </div>
+
+<!-- BANNER TRIAL AGOTADO -->
+<div id="banner-trial">
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polygon points="6,1 11,10 1,10" stroke="#fbbf24" stroke-width="1.2" stroke-linejoin="round" fill="none"/><line x1="6" y1="5" x2="6" y2="7.5" stroke="#fbbf24" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="9" r="0.6" fill="#fbbf24"/></svg>
+  <span>Has usado tu análisis de prueba. Elige un plan para seguir analizando partidos.</span>
+  <button onclick="abrirUpgrade()" style="padding:3px 10px;border-radius:5px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;font-size:10px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Ver planes</button>
+  <button onclick="document.getElementById('banner-trial').style.display='none';sessionStorage.setItem('trial_banner_visto','1')" style="background:none;border:none;color:#a8966a;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;margin-left:4px;">✕</button>
+</div>
 <!-- LOADING SCREEN -->
 <div class="tq-loading" id="tq-loading">
   <div class="tq-loading-logo">
@@ -504,6 +524,10 @@ html,body{height:100%;overflow:hidden;}
     <button class="btn-instrucciones" onclick="toggleInstrucciones()">
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7aaa88" stroke-width="1"/><text x="7" y="11" text-anchor="middle" font-size="8" fill="#7aaa88" font-family="Inter" font-weight="600">?</text></svg>
       Cómo etiquetar
+    </button>
+    <button class="btn-instrucciones" id="btn-faq" onclick="toggleFAQ()">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7aaa88" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7aaa88" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.8" r="0.65" fill="#7aaa88"/></svg>
+      Ayuda
     </button>
 
 
@@ -2262,6 +2286,11 @@ document.addEventListener('click',function(e){
   if(fp && !fp.classList.contains('hidden')&&!e.target.closest('.btn-instrucciones')&&!e.target.closest('.float-panel'))
     fp.classList.add('hidden');
 
+  // FAQ panel cierre al clicar fuera
+  const faqP=document.getElementById('faq-panel');
+  if(faqP && faqP.style.display==='flex' && !e.target.closest('#faq-panel') && !e.target.closest('#btn-faq'))
+    cerrarFAQ();
+
   // pastillas evento
   const pill = e.target.closest('.ev-pill');
   if(pill && pill.dataset.tipo){
@@ -2406,6 +2435,12 @@ async function cargarContador(){
   const btnGestionar = document.getElementById('btn-gestionar-plan');
   if(btnGestionar && plan !== 'trial'){
     btnGestionar.style.display = 'block';
+  }
+
+  // Banner trial agotado
+  if(plan === 'trial' && usados >= 1 && !sessionStorage.getItem('trial_banner_visto')){
+    const bt = document.getElementById('banner-trial');
+    if(bt) bt.style.display = 'flex';
   }
 
   return { usados, limite, restantes, plan };
@@ -2603,6 +2638,32 @@ async function gestionarPlan(){
   }
 }
 
+// ── FAQ ───────────────────────────────────────────────────────────────
+function toggleFAQ(){
+  const panel = document.getElementById('faq-panel');
+  const overlay = document.getElementById('faq-overlay');
+  if(panel.style.display === 'flex'){ cerrarFAQ(); return; }
+  // Resaltar plan actual
+  const planActual = _perfil?.plan || 'trial';
+  const faqLimEl = document.getElementById('faq-limites');
+  if(faqLimEl){
+    faqLimEl.querySelectorAll('[data-plan]').forEach(el => {
+      el.style.color = el.dataset.plan === planActual ? '#1D9E75' : '#a8c4b0';
+    });
+  }
+  document.getElementById('float-panel')?.classList.add('hidden');
+  overlay.style.display = 'block';
+  panel.style.display = 'flex';
+  setTimeout(() => { panel.style.transform = 'translateX(0)'; }, 10);
+}
+
+function cerrarFAQ(){
+  const panel = document.getElementById('faq-panel');
+  const overlay = document.getElementById('faq-overlay');
+  panel.style.transform = 'translateX(100%)';
+  setTimeout(() => { panel.style.display = 'none'; overlay.style.display = 'none'; }, 250);
+}
+
 // ── Onboarding primera vez ────────────────────────────────────────────
 function initOnboarding(){
   if(localStorage.getItem('tactiq_onboarding_done')) return;
@@ -2632,6 +2693,42 @@ function initOnboarding(){
 </script>
 
 <div id="onboarding-tip">👆 Empieza aquí — pega una URL de YouTube</div>
+
+<!-- FAQ OVERLAY + PANEL -->
+<div id="faq-overlay" onclick="cerrarFAQ()"></div>
+<div id="faq-panel">
+  <div style="padding:18px 20px 12px;border-bottom:1px solid #1e2d24;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <span style="font-size:13px;font-weight:600;color:#c8ddd0;">Preguntas frecuentes</span>
+    <button onclick="cerrarFAQ()" style="background:none;border:none;cursor:pointer;color:#5a7a66;font-size:18px;line-height:1;padding:0 2px;transition:color 0.15s;" onmouseover="this.style.color='#c8ddd0'" onmouseout="this.style.color='#5a7a66'">✕</button>
+  </div>
+  <div style="padding:4px 20px 24px;flex:1;">
+    <div class="faq-item">
+      <div class="faq-q">¿Cómo subo el vídeo?</div>
+      <div class="faq-a">Sube el partido a YouTube como <strong>vídeo oculto</strong> (no privado). Los vídeos privados no se pueden incrustar. Copia la URL y pégala en el input de la app.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">¿Qué es el Modo Vestuario?</div>
+      <div class="faq-a">Una pantalla completa con el marcador, estadísticas clave y campograma. Está pensada para <strong>proyectarla al equipo</strong> tras el partido. Disponible desde el post-análisis.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">¿Cómo funciona el chat IA?</div>
+      <div class="faq-a">Tras registrar el partido, la IA analiza todos los eventos etiquetados. Puedes hacerle <strong>preguntas tácticas</strong>: zonas de peligro, jugadores más activos, patrones de juego...</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">¿Cuáles son los límites de mi plan?</div>
+      <div class="faq-a" id="faq-limites">
+        <span data-plan="trial" style="display:block;padding:2px 0;"><strong>Trial:</strong> 1 partido (vitalicio) · 10 preguntas IA</span>
+        <span data-plan="entrenador" style="display:block;padding:2px 0;"><strong>Entrenador:</strong> 3 partidos/mes · 10 preguntas IA</span>
+        <span data-plan="analista" style="display:block;padding:2px 0;"><strong>Analista:</strong> 5 partidos/mes · 20 preguntas IA</span>
+        <span data-plan="elite" style="display:block;padding:2px 0;"><strong>Élite:</strong> 10 partidos/mes · 30 preguntas IA</span>
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">¿Cómo cancelo mi suscripción?</div>
+      <div class="faq-a">Desde el botón <strong>Gestionar plan</strong> en la barra superior (visible si tienes suscripción activa). También escribiéndonos a <strong>soporte@tactiqfutbol.es</strong>.</div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
