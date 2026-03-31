@@ -1381,35 +1381,37 @@ function askSugg(el){
 // ACCIONES
 // ═══════════════════════════════════════════════
 async function nuevoPartido(){
-  // Consultar partidos restantes del mes
+  // Consultar partidos restantes del ciclo actual
+  const PLAN_LIMITES_LOCAL = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
   let restantes = '...';
-  let limite = 3;
+  let limite = 1;
   let diasReset = '';
   try {
     const { data: { session } } = await sb.auth.getSession();
     if(session){
-      const { data: perfil } = await sb.from('perfiles').select('plan,created_at').eq('id',session.user.id).single();
-      const plan = perfil?.plan || 'entrenador';
-      const limites = { entrenador:3, analista:5, elite:10 };
-      limite = limites[plan] || 3;
+      const { data: perfil } = await sb.from('perfiles').select('plan,created_at,plan_renovado_en').eq('id',session.user.id).single();
+      const plan = perfil?.plan || 'trial';
+      limite = PLAN_LIMITES_LOCAL[plan] ?? 1;
 
-      // Ciclo de 30 días desde el registro
-      const registro = new Date(perfil?.created_at || Date.now());
-      const ahora = new Date();
-      const diasDesdeRegistro = Math.floor((ahora - registro) / (1000*60*60*24));
-      const ciclosCompletos = Math.floor(diasDesdeRegistro / 30);
-      const inicioCicloActual = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
-      const finCicloActual = new Date(inicioCicloActual.getTime() + 30*24*60*60*1000);
-      const diasParaReset = Math.ceil((finCicloActual - ahora) / (1000*60*60*24));
-
-      // Contar partidos en el ciclo actual
-      const { count } = await sb.from('partidos')
+      let countQuery = sb.from('partidos')
         .select('*',{count:'exact',head:true})
-        .eq('user_id', session.user.id)
-        .gte('created_at', inicioCicloActual.toISOString());
+        .eq('user_id', session.user.id);
 
+      if(plan !== 'trial'){
+        // Ciclo de 30 días desde plan_renovado_en (alineado con Stripe)
+        const base = new Date(perfil?.plan_renovado_en || perfil?.created_at || Date.now());
+        const ahora = new Date();
+        const ciclosCompletos = Math.floor((ahora - base) / (30*24*60*60*1000));
+        const inicioCicloActual = new Date(base.getTime() + ciclosCompletos * 30*24*60*60*1000);
+        const finCicloActual = new Date(inicioCicloActual.getTime() + 30*24*60*60*1000);
+        const diasParaReset = Math.ceil((finCicloActual - ahora) / (1000*60*60*24));
+        if(diasParaReset > 0) diasReset = `<br><span style="font-size:10px;color:#a8c4b0;margin-top:4px;display:block;">El contador se reinicia en ${diasParaReset} día${diasParaReset===1?'':'s'}.</span>`;
+        countQuery = countQuery.gte('created_at', inicioCicloActual.toISOString());
+      }
+      // Trial: cuenta todos los partidos históricos (límite vitalicio)
+
+      const { count } = await countQuery;
       restantes = Math.max(0, limite - (count||0));
-      if(diasParaReset > 0) diasReset = `<br><span style="font-size:10px;color:#a8c4b0;margin-top:4px;display:block;">El contador se reinicia en ${diasParaReset} día${diasParaReset===1?'':'s'}.</span>`;
     }
   } catch(e){ restantes = '?'; }
 
@@ -1914,7 +1916,7 @@ async function abrirHistorial(){
     const { data: { session } } = await sb.auth.getSession();
     if(!session) return;
 
-    const { data: perfil } = await sb.from('perfiles').select('plan,created_at').eq('id', session.user.id).single();
+    const { data: perfil } = await sb.from('perfiles').select('plan,created_at,plan_renovado_en').eq('id', session.user.id).single();
     const plan = perfil?.plan || 'entrenador';
 
     let query = sb.from('partidos')
@@ -1923,9 +1925,9 @@ async function abrirHistorial(){
       .order('created_at', { ascending: false });
 
     if(plan === 'entrenador'){
-      const registro = new Date(perfil?.created_at || Date.now());
-      const ciclosCompletos = Math.floor((Date.now() - registro) / (30*24*60*60*1000));
-      const inicioCiclo = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
+      const base = new Date(perfil?.plan_renovado_en || perfil?.created_at || Date.now());
+      const ciclosCompletos = Math.floor((Date.now() - base) / (30*24*60*60*1000));
+      const inicioCiclo = new Date(base.getTime() + ciclosCompletos * 30*24*60*60*1000);
       query = query.gte('created_at', inicioCiclo.toISOString());
     }
 

@@ -2134,9 +2134,26 @@ function registrarPartido(){
         eventos:   eventosData,
         registradoEn: new Date().toISOString()
       };
+      // Guardar en servidor primero — el límite se verifica de nuevo en el servidor
+      const { data: { session: sesionGuardar } } = await sb.auth.getSession();
+      if(!sesionGuardar){ showModalAlert('Sesión expirada','Vuelve a iniciar sesión e inténtalo de nuevo.'); return; }
+      try {
+        const resGuardar = await fetch('/.netlify/functions/registrar-partido', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sesionGuardar.access_token}` },
+          body: JSON.stringify(partidoData),
+          signal: AbortSignal.timeout(15000)
+        });
+        if(resGuardar.status === 403){
+          const d = await resGuardar.json();
+          showModalAlert('Límite alcanzado', d.error || 'Has alcanzado el límite de partidos de tu plan.');
+          return;
+        }
+        if(!resGuardar.ok) console.error('Error guardando partido en servidor:', resGuardar.status);
+      } catch(e){
+        console.error('Error guardando partido:', e?.message);
+      }
       localStorage.setItem('tactiq_ultimo_partido', JSON.stringify(partidoData));
-      const { error } = await registrarPartidoSupabase(partidoData);
-      if(error) console.error('Error guardando partido:', error?.message || error?.code);
       window.location.href = 'postpartido.html';
     }
   );
@@ -2332,7 +2349,7 @@ const PLAN_LIMITES = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
 })();
 
 async function cargarContador(){
-  const { data: perfil } = await sb.from('perfiles').select('plan, created_at, stripe_status, preguntas_usadas, partidos_usados').eq('id', _currentUser.id).single();
+  const { data: perfil } = await sb.from('perfiles').select('plan, created_at, plan_renovado_en, stripe_status, preguntas_usadas').eq('id', _currentUser.id).single();
   _perfil = perfil;
 
   if (perfil?.stripe_status === 'past_due') {
@@ -2343,8 +2360,8 @@ async function cargarContador(){
   const plan = perfil?.plan || 'entrenador';
   const limite = PLAN_LIMITES[plan] ?? PLAN_LIMITES['entrenador'];
 
-  // Trial: contar todos los partidos sin ciclo
-  // Resto: ciclo de 30 días desde el registro
+  // Trial: cuenta partidos históricos totales (límite vitalicio)
+  // Resto: ciclo de 30 días desde plan_renovado_en (inicio de suscripción Stripe)
   let usados, restantes;
 
   if (plan === 'trial') {
@@ -2354,12 +2371,12 @@ async function cargarContador(){
     usados = count || 0;
     restantes = Math.max(0, limite - usados);
   } else {
-    const registro = new Date(perfil?.created_at || Date.now());
+    const base = new Date(perfil?.plan_renovado_en || perfil?.created_at || Date.now());
     const ahora = new Date();
-    const ciclosCompletos = Math.floor((ahora - registro) / (30*24*60*60*1000));
-    const inicioCiclo = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
+    const ciclosCompletos = Math.floor((ahora - base) / (30*24*60*60*1000));
+    const inicioCiclo = new Date(base.getTime() + ciclosCompletos * 30*24*60*60*1000);
 
-    // Contar partidos en el ciclo actual
+    // Contar partidos en el ciclo actual (alineado con ciclo de Stripe)
     const { count } = await sb.from('partidos')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', _currentUser.id)
@@ -2385,22 +2402,6 @@ async function cargarContador(){
 }
 
 // ── Registrar partido en Supabase ─────────────
-async function registrarPartidoSupabase(partidoData){
-  const { data, error } = await sb.from('partidos').insert({
-    user_id:         _currentUser.id,
-    local:           partidoData.local,
-    visitante:       partidoData.visitante,
-    jornada:         parseInt(partidoData.jornada) || null,
-    fecha:           partidoData.fecha || null,
-    rol:             partidoData.rol,
-    formacion:       partidoData.formacion,
-    score_local:     partidoData.scoreLocal,
-    score_visitante: partidoData.scoreVisitante,
-    eventos:         partidoData.eventos
-  }).select().single();
-  return { data, error };
-}
-
 // ── Historial de partidos ─────────────────────
 async function abrirHistorial(){
   // Mostrar panel
@@ -2426,9 +2427,9 @@ async function abrirHistorial(){
     // Trial y Entrenador: solo ciclo actual (30 días). Analista/Élite: todos
     // Trial especial: ve todos sus partidos (máximo 1, pero que lo vea siempre)
     if(plan === 'entrenador'){
-      const registro = new Date(_perfil?.created_at || Date.now());
-      const ciclosCompletos = Math.floor((Date.now() - registro) / (30*24*60*60*1000));
-      const inicioCiclo = new Date(registro.getTime() + ciclosCompletos * 30*24*60*60*1000);
+      const base = new Date(_perfil?.plan_renovado_en || _perfil?.created_at || Date.now());
+      const ciclosCompletos = Math.floor((Date.now() - base) / (30*24*60*60*1000));
+      const inicioCiclo = new Date(base.getTime() + ciclosCompletos * 30*24*60*60*1000);
       query = query.gte('created_at', inicioCiclo.toISOString());
     }
     // trial, analista, elite: sin filtro de fecha → ven todos
