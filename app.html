@@ -1078,6 +1078,11 @@ function onPlayerError(event){
   }
 }
 
+// ── Helpers ─────────────────────────────────────────────────────────
+function escapeHTML(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ── Estado partido ──────────────────────────────────────────────────
 const REQUIRED = [
   { label:'Inicio de partido',  chipId:'req-inicio'  },
@@ -1918,11 +1923,11 @@ function renderTabla(){
     tr.innerHTML = `
       <td class="ev-del-cell">${ev.obligatorio?'':'<button class="ev-del" onclick="eliminarEvento('+ev.id+')" title="Eliminar">✕</button>'}</td>
       <td class="ev-id">#${ev.id}</td>
-      <td class="ev-min">${ev.min}</td>
+      <td class="ev-min">${escapeHTML(ev.min)}</td>
       <td><span class="ev-badge ${badgeCls}">${badgeTxt}</span></td>
-      <td style="color:#c8ddd0;font-size:10px;">${ev.jugador}</td>
-      <td class="ev-coords">${ev.x}</td>
-      <td class="ev-coords">${ev.y}</td>`;
+      <td style="color:#c8ddd0;font-size:10px;">${escapeHTML(ev.jugador)}</td>
+      <td class="ev-coords">${escapeHTML(ev.x)}</td>
+      <td class="ev-coords">${escapeHTML(ev.y)}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -2327,7 +2332,7 @@ const PLAN_LIMITES = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
 })();
 
 async function cargarContador(){
-  const { data: perfil } = await sb.from('perfiles').select('*').eq('id', _currentUser.id).single();
+  const { data: perfil } = await sb.from('perfiles').select('plan, created_at, stripe_status, preguntas_usadas, partidos_usados').eq('id', _currentUser.id).single();
   _perfil = perfil;
 
   if (perfil?.stripe_status === 'past_due') {
@@ -2458,14 +2463,14 @@ async function abrirHistorial(){
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
           <div style="display:flex;align-items:center;gap:6px;">
-            ${p.jornada?`<span style="font-size:8px;color:#a8c4b0;background:#1e2d24;padding:1px 6px;border-radius:10px;">J${p.jornada}</span>`:''}
+            ${p.jornada?`<span style="font-size:8px;color:#a8c4b0;background:#1e2d24;padding:1px 6px;border-radius:10px;">J${escapeHTML(p.jornada)}</span>`:''}
             <span style="font-size:8px;color:#a8c4b0;">${fecha}</span>
           </div>
           <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}18;border:1px solid ${resColor}30;padding:1px 8px;border-radius:10px;">${res==='V'?'Victoria':res==='D'?'Derrota':'Empate'}</span>
         </div>
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:3px;">${nosotros} <span style="color:${resColor};">${goles}–${golesC}</span> ${rival}</div>
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:3px;">${escapeHTML(nosotros)} <span style="color:${resColor};">${goles}–${golesC}</span> ${escapeHTML(rival)}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:9px;color:#6a9a7a;">${p.formacion||''} · ${totalEvs} acciones</span>
+          <span style="font-size:9px;color:#6a9a7a;">${escapeHTML(p.formacion||'')} · ${totalEvs} acciones</span>
           <span style="font-size:9px;color:#1D9E75;font-weight:600;">Ver análisis →</span>
         </div>
       `;

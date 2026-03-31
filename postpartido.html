@@ -518,6 +518,13 @@ body{display:flex;flex-direction:column;}
 </div>
 <script>
 // ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function escapeHTML(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ═══════════════════════════════════════════════
 // DATOS
 // ═══════════════════════════════════════════════
 let partido = null;
@@ -604,7 +611,7 @@ function renderHeader(){
   const rivGoles = p.rol === 'Local' ? sv : sl;
 
   document.getElementById('ph-score').innerHTML =
-    `<span style="color:var(--ink)">${local}</span> <span style="color:#1D9E75">${nosGoles}</span> <span style="color:var(--ghost);font-weight:300"> — </span><span style="color:#f87171">${rivGoles}</span> <span style="color:var(--ink)">${visit}</span>`;
+    `<span style="color:var(--ink)">${escapeHTML(local)}</span> <span style="color:#1D9E75">${nosGoles}</span> <span style="color:var(--ghost);font-weight:300"> — </span><span style="color:#f87171">${rivGoles}</span> <span style="color:var(--ink)">${escapeHTML(visit)}</span>`;
 
   const res = nosGoles > rivGoles ? 'Victoria' : nosGoles < rivGoles ? 'Derrota' : 'Empate';
   const resEl = document.getElementById('ph-resultado');
@@ -1067,7 +1074,7 @@ function renderTabla(){
     tr.innerHTML = `
       <td style="color:#a8c4b0;white-space:nowrap;">${minDisplay}'</td>
       <td><span class="ev-badge" style="background:${color}18;color:${color};border:1px solid ${color}30;">${tipoLabel(ev.tipo)}</span></td>
-      <td style="color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${ev.jugador||'—'}</td>
+      <td style="color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${escapeHTML(ev.jugador||'—')}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -1530,8 +1537,8 @@ function compartirPartido(){
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
         <span style="font-size:72px;font-weight:800;color:rgba(29,158,117,0.05);letter-spacing:-3px;">tactiq</span>
       </div>
-      <div style="font-size:9px;color:#a8c4b0;margin-bottom:4px;">${p.jornada?'J'+p.jornada+' · ':''}${p.fecha||''} · ${p.formacion||''}</div>
-      <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;margin-bottom:8px;">${nosotros} <span style="color:${resColor};">${goles} — ${golesContra}</span> ${rival}</div>
+      <div style="font-size:9px;color:#a8c4b0;margin-bottom:4px;">${p.jornada?'J'+escapeHTML(p.jornada)+' · ':''}${p.fecha||''} · ${escapeHTML(p.formacion||'')}</div>
+      <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;margin-bottom:8px;">${escapeHTML(nosotros)} <span style="color:${resColor};">${goles} — ${golesContra}</span> ${escapeHTML(rival)}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <span style="font-size:9px;background:rgba(29,158,117,0.12);color:#1D9E75;border:1px solid rgba(29,158,117,0.2);padding:2px 8px;border-radius:10px;">${resTexto}</span>
       </div>
@@ -1839,8 +1846,8 @@ function modoVestuario(){
         </div>
         <!-- resultado grande -->
         <div style="text-align:center;flex-shrink:0;">
-          <div style="font-size:13px;color:#a8c4b0;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">${p.jornada?'Jornada '+p.jornada:'Partido'} ${p.fecha?'· '+p.fecha:''}</div>
-          <div style="font-size:64px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1;">${nosotros} <span style="color:${resColor};">${goles} — ${golesContra}</span> ${rival}</div>
+          <div style="font-size:13px;color:#a8c4b0;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">${p.jornada?'Jornada '+escapeHTML(p.jornada):'Partido'} ${p.fecha?'· '+p.fecha:''}</div>
+          <div style="font-size:64px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1;">${escapeHTML(nosotros)} <span style="color:${resColor};">${goles} — ${golesContra}</span> ${escapeHTML(rival)}</div>
           <div style="font-size:18px;font-weight:700;color:${resColor};margin-top:8px;letter-spacing:2px;text-transform:uppercase;">${resultado}</div>
         </div>
         <!-- KPIs grandes -->
@@ -1947,14 +1954,14 @@ async function abrirHistorial(){
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
           <div style="display:flex;align-items:center;gap:6px;">
-            ${p.jornada?`<span style="font-size:8px;color:#a8c4b0;background:#1e2d24;padding:1px 6px;border-radius:10px;">J${p.jornada}</span>`:''}
+            ${p.jornada?`<span style="font-size:8px;color:#a8c4b0;background:#1e2d24;padding:1px 6px;border-radius:10px;">J${escapeHTML(p.jornada)}</span>`:''}
             <span style="font-size:8px;color:#a8c4b0;">${fecha}</span>
           </div>
           <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}18;border:1px solid ${resColor}30;padding:1px 8px;border-radius:10px;">${res==='V'?'Victoria':res==='D'?'Derrota':'Empate'}</span>
         </div>
-        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">${nosotros} <span style="color:${resColor};">${goles}–${golesC}</span> ${rival}</div>
+        <div style="font-size:12px;font-weight:600;color:#c8ddd0;margin-bottom:4px;">${escapeHTML(nosotros)} <span style="color:${resColor};">${goles}–${golesC}</span> ${escapeHTML(rival)}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:9px;color:#6a9a7a;">${p.formacion||''} · ${totalEvs} acciones</span>
+          <span style="font-size:9px;color:#6a9a7a;">${escapeHTML(p.formacion||'')} · ${totalEvs} acciones</span>
           <span style="font-size:9px;color:#1D9E75;font-weight:600;">Ver análisis →</span>
         </div>
       `;

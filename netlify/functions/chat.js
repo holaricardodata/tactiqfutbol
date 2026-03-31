@@ -30,7 +30,7 @@ exports.handler = async function(event) {
   }
 
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': 'https://tactiqfutbol.es',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json'
   };
@@ -100,6 +100,17 @@ exports.handler = async function(event) {
         headers,
         body: JSON.stringify({ error: 'messages requerido' })
       };
+    }
+
+    if (messages.length > 100) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Demasiados mensajes' }) };
+    }
+    const validRoles = new Set(['user', 'assistant']);
+    const MAX_MSG_LEN = 12000;
+    for (const m of messages) {
+      if (!validRoles.has(m?.role) || typeof m?.content !== 'string' || m.content.length > MAX_MSG_LEN) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Formato de mensaje inválido' }) };
+      }
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
