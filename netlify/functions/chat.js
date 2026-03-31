@@ -94,7 +94,7 @@ exports.handler = async function(event) {
   // ── 4. Llamar a Claude API ─────────────────────
   try {
     const { messages } = JSON.parse(event.body);
-    if (!messages || !Array.isArray(messages)) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return {
         statusCode: 400,
         headers,

@@ -451,6 +451,12 @@ html,body{height:100%;overflow:hidden;}
 </div>
 
 <div class="app">
+<!-- BANNER PAGO FALLIDO -->
+<div id="banner-pago" style="display:none;align-items:center;justify-content:center;gap:10px;background:#7c2424;border-bottom:1px solid #b83030;padding:8px 18px;font-size:11px;color:#ffd0d0;flex-shrink:0;position:relative;z-index:100;">
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1L1 14h14L8 1z" stroke="#f87171" stroke-width="1.4" stroke-linejoin="round"/><line x1="8" y1="7" x2="8" y2="10" stroke="#f87171" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="12.5" r="0.7" fill="#f87171"/></svg>
+  <span>Hay un problema con tu pago. Actualiza tu método de pago para evitar perder el acceso.</span>
+  <button onclick="gestionarPlan()" style="padding:4px 10px;border-radius:5px;background:#f87171;border:none;color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Actualizar pago</button>
+</div>
 <!-- LOADING SCREEN -->
 <div class="tq-loading" id="tq-loading">
   <div class="tq-loading-logo">
@@ -2321,6 +2327,11 @@ const PLAN_LIMITES = { trial: 1, entrenador: 3, analista: 5, elite: 10 };
 async function cargarContador(){
   const { data: perfil } = await sb.from('perfiles').select('*').eq('id', _currentUser.id).single();
   _perfil = perfil;
+
+  if (perfil?.stripe_status === 'past_due') {
+    const banner = document.getElementById('banner-pago');
+    if (banner) banner.style.display = 'flex';
+  }
 
   const plan = perfil?.plan || 'entrenador';
   const limite = PLAN_LIMITES[plan] ?? PLAN_LIMITES['entrenador'];
