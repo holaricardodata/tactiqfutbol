@@ -1180,12 +1180,14 @@ function _updateTopbarMatchInfo(){
   const rol      = document.getElementById('rol-visitante')?.checked ? 'Visitante' : 'Local';
   const info     = document.getElementById('topbar-match-info');
   if(!info) return;
-  document.getElementById('tmi-equipos').textContent = `${local} vs ${visitante}`;
+  const equiposEl = document.getElementById('tmi-equipos');
+  const metaEl    = document.getElementById('tmi-meta');
+  if(equiposEl) equiposEl.textContent = `${local} vs ${visitante}`;
   const parts = [];
   if(jornada) parts.push(`J${jornada}`);
   if(fecha)   parts.push(new Date(fecha).toLocaleDateString('es-ES',{day:'numeric',month:'short'}));
   parts.push(`(${rol})`);
-  document.getElementById('tmi-meta').textContent = parts.join(' · ');
+  if(metaEl) metaEl.textContent = parts.join(' · ');
   info.style.display = 'flex';
 }
 
@@ -1810,12 +1812,12 @@ function updateScore(whoScored){
   }
   const sl = document.getElementById('score-local'); if(sl) sl.textContent = scoreLocal;
   const sv = document.getElementById('score-visitante'); if(sv) sv.textContent = scoreVisitante;
-  const sb = document.getElementById('score-board');
+  const sbEl = document.getElementById('score-board');
   const isOurs = whoScored === 'nos';
-  if(sb){
-    sb.style.borderColor = isOurs ? 'rgba(29,158,117,0.8)' : 'rgba(239,68,68,0.6)';
-    sb.style.boxShadow   = isOurs ? '0 0 16px rgba(29,158,117,0.4)' : '0 0 14px rgba(239,68,68,0.3)';
-    setTimeout(()=>{sb.style.borderColor='rgba(29,158,117,0.25)';sb.style.boxShadow='none';},800);
+  if(sbEl){
+    sbEl.style.borderColor = isOurs ? 'rgba(29,158,117,0.8)' : 'rgba(239,68,68,0.6)';
+    sbEl.style.boxShadow   = isOurs ? '0 0 16px rgba(29,158,117,0.4)' : '0 0 14px rgba(239,68,68,0.3)';
+    setTimeout(()=>{sbEl.style.borderColor='rgba(29,158,117,0.25)';sbEl.style.boxShadow='none';},800);
   }
 }
 
@@ -2228,7 +2230,7 @@ function toggleInstrucciones(){ document.getElementById('float-panel').classList
 document.addEventListener('click',function(e){
   // float panel cierre
   const fp=document.getElementById('float-panel');
-  if(!fp.classList.contains('hidden')&&!e.target.closest('.btn-instrucciones')&&!e.target.closest('.float-panel'))
+  if(fp && !fp.classList.contains('hidden')&&!e.target.closest('.btn-instrucciones')&&!e.target.closest('.float-panel'))
     fp.classList.add('hidden');
 
   // pastillas evento
@@ -2521,16 +2523,15 @@ async function irACheckout(plan){
   btn.style.pointerEvents = 'none';
 
   try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session){ showModalAlert('Sesión expirada','Vuelve a iniciar sesión e inténtalo de nuevo.'); return; }
     const res = await fetch('/.netlify/functions/crear-checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        plan,
-        email: _currentUser.email,
-        userId: _currentUser.id
-      })
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ plan })
     });
     const data = await res.json();
+    if(!res.ok) throw new Error(data.error || `Error ${res.status}`);
     if(data.url){
       window.location.href = data.url;
     } else {
@@ -2563,6 +2564,7 @@ async function gestionarPlan(){
 
   try {
     const { data: { session } } = await sb.auth.getSession();
+    if(!session){ showModalAlert('Sesión expirada','Vuelve a iniciar sesión e inténtalo de nuevo.'); return; }
     const res = await fetch('/.netlify/functions/portal-stripe', {
       method: 'POST',
       headers: {
