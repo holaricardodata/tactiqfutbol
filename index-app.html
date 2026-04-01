@@ -283,6 +283,15 @@ async function doRegister(){
   }
 
   setLoading('btn-register', false, 'Crear cuenta →');
+
+  // Enviar email de bienvenida (fire-and-forget, no bloquea la UX)
+  fetch('/.netlify/functions/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'bienvenida', email, nombre }),
+    signal: AbortSignal.timeout(10000)
+  }).catch(() => {/* fallo silencioso — no afecta al flujo de registro */});
+
   const planPendiente = sessionStorage.getItem('plan_pendiente');
   const planesValidos = ['entrenador','analista','elite'];
   const safePlan = planesValidos.includes(planPendiente)
